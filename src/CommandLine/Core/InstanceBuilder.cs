@@ -17,6 +17,7 @@ namespace CommandLine.Core
     static class InstanceBuilder
     {
         public static ParserResult<T> Build<T>(
+            Type typeInfo,
             Maybe<Func<T>> factory,
             Func<IEnumerable<string>, IEnumerable<OptionSpecification>, Result<IEnumerable<Token>, Error>> tokenizer,
             IEnumerable<string> arguments,
@@ -25,10 +26,15 @@ namespace CommandLine.Core
             CultureInfo parsingCulture,
             IEnumerable<ErrorType> nonFatalErrors)
         {
-            var typeInfo = factory.MapValueOrDefault(f => f().GetType(), typeof(T));
+            var isMutable = typeInfo.IsMutable();
+
+            if (!isMutable && factory.IsJust())
+            {
+                throw new ArgumentException("Cannot use factor for immutable types.", "factory");
+            }
 
             var specProps = typeInfo.GetSpecifications(pi => SpecificationProperty.Create(
-                    Specification.FromProperty(pi), pi, Maybe.Nothing<object>()));
+                    Specification.FromProperty(pi), pi, Maybe.Nothing<object>())).Memorize();
 
             var specs = from pt in specProps select pt.Specification;
 
@@ -36,14 +42,8 @@ namespace CommandLine.Core
                 .ThrowingValidate(SpecificationGuards.Lookup)
                 .OfType<OptionSpecification>();
 
-            Func<T> makeDefault = () =>
-                typeof(T).IsMutable()
-                    ? factory.MapValueOrDefault(f => f(), Activator.CreateInstance<T>())
-                    : ReflectionHelper.CreateDefaultImmutableInstance<T>(
-                        (from p in specProps select p.Specification.ConversionType).ToArray());
-
             Func<IEnumerable<Error>, ParserResult<T>> notParsed =
-                errs => new NotParsed<T>(makeDefault().GetType().ToTypeInfo(), errs);
+                errs => new NotParsed<T>(typeInfo.ToTypeInfo(), errs);
 
             Func<ParserResult<T>> buildUp = () =>
             {
@@ -78,11 +78,11 @@ namespace CommandLine.Core
                                 .FromOptionSpecification());
 
                 var specPropsWithValue =
-                    optionSpecPropsResult.SucceededWith().Concat(valueSpecPropsResult.SucceededWith());
+                    optionSpecPropsResult.SucceededWith().Concat(valueSpecPropsResult.SucceededWith()).Memorize();
 
                 Func<T> buildMutable = () =>
                 {
-                    var mutable = factory.MapValueOrDefault(f => f(), Activator.CreateInstance<T>());
+                    var mutable = factory.MapValueOrDefault(f => f(), (T)Activator.CreateInstance(typeInfo));
                     mutable =
                         mutable.SetProperties(specPropsWithValue, sp => sp.Value.IsJust(), sp => sp.Value.FromJustOrFail())
                             .SetProperties(
@@ -111,7 +111,7 @@ namespace CommandLine.Core
                     return immutable;
                 };
 
-                var instance = typeInfo.IsMutable() ? buildMutable() : buildImmutable();
+                var instance = isMutable ? buildMutable() : buildImmutable();
                 
                 var validationErrors = specPropsWithValue.Validate(SpecificationPropertyRules.Lookup(tokens));
 

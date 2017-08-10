@@ -18,6 +18,9 @@ namespace CommandLine.Core
                 IEnumerable<string> values,
                 Func<IEnumerable<string>, Type, bool, Maybe<object>> converter)
         {
+            specProps = specProps.Memorize();
+            values = values.Memorize();
+
             var propAndErrors = MapValuesImpl(specProps, values, converter);
 
             return Result.Succeed(

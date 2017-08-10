@@ -36,7 +36,7 @@ namespace CommandLine.Core
                           select token)
                             .Memorize();
 
-            var normalized = normalize(tokens);
+            var normalized = normalize(tokens).Memorize();
 
             var unkTokens = (from t in normalized where t.IsName() && nameLookup(t.Text) == NameLookupResult.NoOptionFound select t).Memorize();
 

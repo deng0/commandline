@@ -52,11 +52,11 @@ namespace CommandLine.Core
             CultureInfo parsingCulture,
             IEnumerable<ErrorType> nonFatalErrors)
         {
+            verbs = verbs.Memorize();
             return verbs.Any(a => nameComparer.Equals(a.Item1.Name, arguments.First()))
                 ? InstanceBuilder.Build(
-                    Maybe.Just<Func<object>>(
-                        () =>
-                            verbs.Single(v => nameComparer.Equals(v.Item1.Name, arguments.First())).Item2.AutoDefault()),
+                    verbs.Single(v => nameComparer.Equals(v.Item1.Name, arguments.First())).Item2,
+                    Maybe.Nothing<Func<object>>(),
                     tokenizer,
                     arguments.Skip(1),
                     nameComparer,

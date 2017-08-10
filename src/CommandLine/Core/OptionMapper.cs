@@ -18,6 +18,8 @@ namespace CommandLine.Core
                 Func<IEnumerable<string>, Type, bool, Maybe<object>> converter,
                 StringComparer comparer)
         {
+            options = options.Memorize();
+
             var sequencesAndErrors = propertyTuples
                 .Select(
                     pt =>
@@ -43,7 +45,7 @@ namespace CommandLine.Core
                                                 ((OptionSpecification)pt.Specification).FromOptionSpecification()))))
                             : Tuple.Create(pt, Maybe.Nothing<Error>());
                     }
-                );
+                ).Memorize();
             return Result.Succeed(
                 sequencesAndErrors.Select(se => se.Item1),
                 sequencesAndErrors.Select(se => se.Item2).OfType<Just<Error>>().Select(se => se.Value));
