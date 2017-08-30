@@ -1,5 +1,6 @@
 ﻿// Copyright 2005-2015 Giacomo Stelluti Scala & Contributors. All rights reserved. See License.md in the project root for license information.
 
+using CommandLine.Core;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -157,7 +158,7 @@ namespace CommandLine
     /// It contains a sequence of <see cref="CommandLine.Error"/>.
     /// </summary>
     /// <typeparam name="T">The type with attributes that define the syntax of parsing rules.</typeparam>
-    public sealed class NotParsed<T> : ParserResult<T>, IEquatable<NotParsed<T>>
+    public class NotParsed<T> : ParserResult<T>, IEquatable<NotParsed<T>>
     {
         private readonly IEnumerable<Error> errors;
 
@@ -166,6 +167,13 @@ namespace CommandLine
         {
             this.errors = errors;
         }
+
+        /// <summary>
+        /// Creates a new <see cref="NotParsed{T}"/> object from an array of <see cref="Error"/>s.
+        /// </summary>
+        /// <param name="errors">The <see cref="Error"/>s that should be contained in the <see cref="ParserResult{T}"/>.</param>
+        /// <returns>A new <see cref="NotParsed{T}"/> instance.</returns>
+        public static NotParsed<T> FromErrorList(params Error[] errors) => new NotParsed<T>(typeof(T).ToTypeInfo(), errors);
 
         /// <summary>
         /// Gets the sequence of parsing errors.
