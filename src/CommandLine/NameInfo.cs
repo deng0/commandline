@@ -18,7 +18,12 @@ namespace CommandLine
         private readonly string longName;
         private readonly string shortName;
 
-        internal NameInfo(string shortName, string longName)
+        /// <summary>
+        /// Creates a new <see cref="NameInfo"/> instance.
+        /// </summary>
+        /// <param name="shortName">The short name information.</param>
+        /// <param name="longName">The long name information.</param>
+        public NameInfo(string shortName, string longName)
         {
             if (shortName == null) throw new ArgumentNullException("shortName");
             if (longName == null) throw new ArgumentNullException("longName");
