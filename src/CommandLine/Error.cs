@@ -60,7 +60,11 @@ namespace CommandLine
         /// <summary>
         /// Value of <see cref="CommandLine.VersionRequestedError"/> type.
         /// </summary>
-        VersionRequestedError
+        VersionRequestedError,
+        /// <summary>
+        /// Value of <see cref="CommandLine.CustomError"/> type.
+        /// </summary>
+        CustomError
     }
 
     /// <summary>
@@ -77,7 +81,7 @@ namespace CommandLine
         /// </summary>
         /// <param name="tag">Type discriminator tag.</param>
         /// <param name="stopsProcessing">Tells if error stops parsing process.</param>
-        protected internal Error(ErrorType tag, bool stopsProcessing)
+        protected Error(ErrorType tag, bool stopsProcessing)
         {
             this.tag = tag;
             this.stopsProcessing = stopsProcessing;
@@ -224,7 +228,11 @@ namespace CommandLine
     /// </summary>
     public sealed class BadFormatTokenError : TokenError
     {
-        internal BadFormatTokenError(string token)
+        /// <summary>
+        /// Creates a new <see cref="BadFormatTokenError"/> instance.
+        /// </summary>
+        /// <param name="token">The invalid token</param>
+        public BadFormatTokenError(string token)
             : base(ErrorType.BadFormatTokenError, token)
         {
         }
@@ -243,7 +251,7 @@ namespace CommandLine
         /// <param name="tag">Error type.</param>
         /// <param name="nameInfo">Problematic name.</param>
 
-        protected internal NamedError(ErrorType tag, NameInfo nameInfo)
+        protected NamedError(ErrorType tag, NameInfo nameInfo)
             : base(tag)
         {
             this.nameInfo = nameInfo;
@@ -303,7 +311,11 @@ namespace CommandLine
     /// </summary>
     public sealed class MissingValueOptionError : NamedError
     {
-        internal MissingValueOptionError(NameInfo nameInfo)
+        /// <summary>
+        /// Creates a new <see cref="MissingValueOptionError"/> instance.
+        /// </summary>
+        /// <param name="nameInfo">The option's name information.</param>
+        public MissingValueOptionError(NameInfo nameInfo)
             : base(ErrorType.MissingValueOptionError, nameInfo)
         {
         }
@@ -314,7 +326,11 @@ namespace CommandLine
     /// </summary>
     public sealed class UnknownOptionError : TokenError
     {
-        internal UnknownOptionError(string token)
+        /// <summary>
+        /// Creates a new <see cref="UnknownOptionError"/> instance.
+        /// </summary>
+        /// <param name="token">The unknown token.</param>
+        public UnknownOptionError(string token)
             : base(ErrorType.UnknownOptionError, token)
         {
         }
@@ -325,7 +341,11 @@ namespace CommandLine
     /// </summary>
     public sealed class MissingRequiredOptionError : NamedError
     {
-        internal MissingRequiredOptionError(NameInfo nameInfo)
+        /// <summary>
+        /// Creates a new <see cref="MissingRequiredOptionError"/> instance.
+        /// </summary>
+        /// <param name="nameInfo">The option's name information.</param>
+        public MissingRequiredOptionError(NameInfo nameInfo)
             : base(ErrorType.MissingRequiredOptionError, nameInfo)
         {
         }
@@ -338,7 +358,12 @@ namespace CommandLine
     {
         private readonly string setName;
 
-        internal MutuallyExclusiveSetError(NameInfo nameInfo, string setName)
+        /// <summary>
+        /// Creates a new <see cref="MutuallyExclusiveSetError"/> instance.
+        /// </summary>
+        /// <param name="nameInfo">The option's name information.</param>
+        /// <param name="setName">The name of the mutually exclusive set.</param>
+        public MutuallyExclusiveSetError(NameInfo nameInfo, string setName)
             : base(ErrorType.MutuallyExclusiveSetError, nameInfo)
         {
             this.setName = setName;
@@ -358,7 +383,11 @@ namespace CommandLine
     /// </summary>
     public sealed class BadFormatConversionError : NamedError
     {
-        internal BadFormatConversionError(NameInfo nameInfo)
+        /// <summary>
+        /// Creates a new <see cref="BadFormatConversionError"/> instance.
+        /// </summary>
+        /// <param name="nameInfo">The option's name information.</param>
+        public BadFormatConversionError(NameInfo nameInfo)
             : base(ErrorType.BadFormatConversionError, nameInfo)
         {
         }
@@ -369,7 +398,11 @@ namespace CommandLine
     /// </summary>
     public sealed class SequenceOutOfRangeError : NamedError
     {
-        internal SequenceOutOfRangeError(NameInfo nameInfo)
+        /// <summary>
+        /// Creates a new <see cref="SequenceOutOfRangeError"/> instance.
+        /// </summary>
+        /// <param name="nameInfo">The option's name information.</param>
+        public SequenceOutOfRangeError(NameInfo nameInfo)
             : base(ErrorType.SequenceOutOfRangeError, nameInfo)
         {
         }
@@ -380,7 +413,11 @@ namespace CommandLine
     /// </summary>
     public sealed class RepeatedOptionError : NamedError
     {
-        internal RepeatedOptionError(NameInfo nameInfo)
+        /// <summary>
+        /// Creates a new <see cref="RepeatedOptionError"/> instance.
+        /// </summary>
+        /// <param name="nameInfo">The option's name information.</param>
+        public RepeatedOptionError(NameInfo nameInfo)
             : base(ErrorType.RepeatedOptionError, nameInfo)
         {
         }
@@ -391,7 +428,11 @@ namespace CommandLine
     /// </summary>
     public sealed class BadVerbSelectedError : TokenError
     {
-        internal BadVerbSelectedError(string token)
+        /// <summary>
+        /// Creates a new <see cref="BadVerbSelectedError"/> instance.
+        /// </summary>
+        /// <param name="token">The unknown verb.</param>
+        public BadVerbSelectedError(string token)
             : base(ErrorType.BadVerbSelectedError, token)
         {
         }
@@ -455,7 +496,10 @@ namespace CommandLine
     /// </summary>
     public sealed class NoVerbSelectedError : Error
     {
-        internal NoVerbSelectedError()
+        /// <summary>
+        /// Creates a new <see cref="NoVerbSelectedError"/> instance.
+        /// </summary>
+        public NoVerbSelectedError()
             : base(ErrorType.NoVerbSelectedError)
         {
         }
@@ -471,4 +515,40 @@ namespace CommandLine
         {
         }
     }
+
+    /// <summary>
+    /// Base class for <see cref="Error"/>s that can be customized to fit user's needs.
+    /// </summary>
+    public abstract class CustomError : Error
+    {
+        /// <summary>
+        /// Creates a new <see cref="CustomError"/> instance with
+        /// <see cref="ErrorType.CustomError"/> tag.
+        /// </summary>
+        protected CustomError() : base(ErrorType.CustomError)
+        {
+        }
+        
+        /// <summary>
+        /// A message that describes the error.
+        /// </summary>
+        public string Message { get; protected set; } 
+
+    }
+
+    /// <summary>
+    /// Error that contains a simple error message.
+    /// </summary>
+    public class MessageError : CustomError
+    {
+        /// <summary>
+        /// Creates a new <see cref="MessageError"/> instance.
+        /// </summary>
+        /// <param name="msg">The error message.</param>
+        public MessageError(string msg) : base()
+        {
+            this.Message = msg;
+        }
+    }
+
 }
