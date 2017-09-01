@@ -208,6 +208,7 @@ namespace CommandLine.Text
             Func<HelpText, HelpText> onError,
             Func<Example, Example> onExample,
             bool verbsIndex = false,
+            IEnumerable<Specification> additionalOptions = null,
             int maxDisplayWidth = DefaultMaximumLength)
         {
             var auto = new HelpText
@@ -265,7 +266,7 @@ namespace CommandLine.Text
                 auto.AddVerbs(parserResult.TypeInfo.Choices.ToArray());
             }
             else
-                auto.AddOptions(parserResult);
+                auto.AddOptions(parserResult, additionalOptions);
 
             return auto;
         }
@@ -281,7 +282,7 @@ namespace CommandLine.Text
         /// </returns>
         /// <remarks>This feature is meant to be invoked automatically by the parser, setting the HelpWriter property
         /// of <see cref="CommandLine.ParserSettings"/>.</remarks>
-        public static HelpText AutoBuild<T>(ParserResult<T> parserResult, int maxDisplayWidth = DefaultMaximumLength)
+        public static HelpText AutoBuild<T>(ParserResult<T> parserResult, int maxDisplayWidth = DefaultMaximumLength, IEnumerable<Specification> additionalOptions = null)
         {
             if (parserResult.Tag != ParserResultType.NotParsed)
                 throw new ArgumentException("Excepting NotParsed<T> type.", "parserResult");
@@ -292,13 +293,13 @@ namespace CommandLine.Text
                 return new HelpText(HeadingInfo.Default){MaximumDisplayWidth = maxDisplayWidth }.AddPreOptionsLine(Environment.NewLine);
 
             if (!errors.Any(e => e.Tag == ErrorType.HelpVerbRequestedError))
-                return AutoBuild(parserResult, current => DefaultParsingErrorsHandler(parserResult, current), e => e, maxDisplayWidth: maxDisplayWidth);
+                return AutoBuild(parserResult, current => DefaultParsingErrorsHandler(parserResult, current), e => e, false, additionalOptions, maxDisplayWidth);
 
             var err = errors.OfType<HelpVerbRequestedError>().Single();
             var pr = new NotParsed<object>(TypeInfo.Create(err.Type), Enumerable.Empty<Error>());
             return err.Matched
-                ? AutoBuild(pr, current => DefaultParsingErrorsHandler(pr, current), e => e, maxDisplayWidth: maxDisplayWidth)
-                : AutoBuild(parserResult, current => DefaultParsingErrorsHandler(parserResult, current), e => e, true, maxDisplayWidth);
+                ? AutoBuild(pr, current => DefaultParsingErrorsHandler(pr, current), e => e, false, additionalOptions, maxDisplayWidth)
+                : AutoBuild(parserResult, current => DefaultParsingErrorsHandler(parserResult, current), e => e, true, additionalOptions, maxDisplayWidth);
         }
 
         /// <summary>
@@ -410,12 +411,13 @@ namespace CommandLine.Text
         /// </summary>
         /// <param name="result">A parsing computation result.</param>
         /// <exception cref="System.ArgumentNullException">Thrown when parameter <paramref name="result"/> is null.</exception>
-        public HelpText AddOptions<T>(ParserResult<T> result)
+        public HelpText AddOptions<T>(ParserResult<T> result, IEnumerable<Specification> additionalOptions = null)
         {
             if (result == null) throw new ArgumentNullException("result");
-
+            additionalOptions = additionalOptions ?? Enumerable.Empty<Specification>();
+            var specifications = this.GetSpecificationsFromType(result.TypeInfo.Current).Concat(additionalOptions);
             return AddOptionsImpl(
-                GetSpecificationsFromType(result.TypeInfo.Current),
+                specifications,
                 SentenceBuilder.RequiredWord(),
                 MaximumDisplayWidth);
         }
@@ -725,13 +727,13 @@ namespace CommandLine.Text
         {
             var maxLength = GetMaxLength(specifications);
 
-            optionsHelp = new StringBuilder(BuilderCapacity);
+            this.optionsHelp = new StringBuilder(BuilderCapacity);
 
             var remainingSpace = maximumLength - (maxLength + 6);
 
             specifications.ForEach(
                 option =>
-                    AddOption(requiredWord, maxLength, option, remainingSpace));
+                    this.AddOption(requiredWord, maxLength, option, remainingSpace));
 
             return this;
         }

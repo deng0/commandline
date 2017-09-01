@@ -74,15 +74,14 @@ namespace CommandLine
         /// <summary>
         /// Parser result type discriminator, defined as <see cref="CommandLine.ParserResultType"/> enumeration.
         /// </summary>
-        public ParserResultType Tag
-        {
-            get { return this.tag; }
-        }
+        public ParserResultType Tag => this.tag;
 
-        internal TypeInfo TypeInfo
-        {
-            get { return typeInfo; }
-        }
+        internal TypeInfo TypeInfo => this.typeInfo;
+
+        /// <summary>
+        /// Type of the object that is parsed; this could be different from <c>typeof(T)</c>.
+        /// </summary>
+        public Type CurrentType => this.typeInfo.Current;
     }
 
     /// <summary>

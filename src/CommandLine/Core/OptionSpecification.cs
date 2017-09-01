@@ -7,14 +7,14 @@ using CSharpx;
 
 namespace CommandLine.Core
 {
-    sealed class OptionSpecification : Specification
+    public sealed class OptionSpecification : Specification
     {
         private readonly string shortName;
         private readonly string longName;
         private readonly char separator;
         private readonly string setName;
 
-        public OptionSpecification(string shortName, string longName, bool required, string setName, Maybe<int> min, Maybe<int> max,
+        internal OptionSpecification(string shortName, string longName, bool required, string setName, Maybe<int> min, Maybe<int> max,
             char separator, Maybe<object> defaultValue, string helpText, string metaValue, IEnumerable<string> enumValues,
             Type conversionType, TargetType targetType, bool hidden = false)
             : base(SpecificationType.Option, required, min, max, defaultValue, helpText, metaValue, enumValues, conversionType, targetType, hidden)
@@ -25,7 +25,7 @@ namespace CommandLine.Core
             this.setName = setName;
         }
 
-        public static OptionSpecification FromAttribute(OptionAttribute attribute, Type conversionType, IEnumerable<string> enumValues)
+        internal static OptionSpecification FromAttribute(OptionAttribute attribute, Type conversionType, IEnumerable<string> enumValues)
         {
             return new OptionSpecification(
                 attribute.ShortName,
@@ -50,24 +50,12 @@ namespace CommandLine.Core
                 '\0', Maybe.Nothing<object>(), helpText, metaValue, Enumerable.Empty<string>(), typeof(bool), TargetType.Switch, hidden);
         }
 
-        public string ShortName
-        {
-            get { return shortName; }
-        }
+        public string ShortName => this.shortName;
 
-        public string LongName
-        {
-            get { return longName; }
-        }
+        public string LongName => this.longName;
 
-        public char Separator
-        {
-            get { return separator; }
-        }
+        public char Separator => this.separator;
 
-        public string SetName
-        {
-            get { return setName; }
-        }
+        public string SetName => this.setName;
     }
 }
