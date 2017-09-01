@@ -8,20 +8,20 @@ using CSharpx;
 
 namespace CommandLine.Core
 {
-    enum SpecificationType
+    internal enum SpecificationType
     {
         Option,
         Value
     }
 
-    enum TargetType
+    public enum TargetType
     {
         Switch,
         Scalar,
         Sequence
     }
 
-    abstract class Specification
+    public abstract class Specification
     {
         private readonly SpecificationType tag;
         private readonly bool required;
@@ -36,7 +36,7 @@ namespace CommandLine.Core
         private readonly Type conversionType;
         private readonly TargetType targetType;
 
-        protected Specification(SpecificationType tag, bool required, Maybe<int> min, Maybe<int> max,
+        internal Specification(SpecificationType tag, bool required, Maybe<int> min, Maybe<int> max,
             Maybe<object> defaultValue, string helpText, string metaValue, IEnumerable<string> enumValues,
             Type conversionType, TargetType targetType, bool hidden = false)
         {
@@ -53,62 +53,35 @@ namespace CommandLine.Core
             this.hidden = hidden;
         }
 
-        public SpecificationType Tag 
-        {
-            get { return tag; }
-        }
+        internal SpecificationType Tag => this.tag;
 
-        public bool Required
-        {
-            get { return required; }
-        }
+        public bool Required => this.required;
 
-        public Maybe<int> Min
-        {
-            get { return min; }
-        }
+        internal Maybe<int> Min => this.min;
 
-        public Maybe<int> Max
-        {
-            get { return max; }
-        }
+        internal Maybe<int> Max => this.max;
 
-        public Maybe<object> DefaultValue
-        {
-            get { return defaultValue; }
-        }
+        public int? MinCount => this.Min.MapValueOrDefault<int, int?>(val => val, null);
 
-        public string HelpText
-        {
-            get { return helpText; }
-        }
+        public int? MaxCount => this.Max.MapValueOrDefault<int, int?>(val => val, null);
 
-        public string MetaValue
-        {
-            get { return metaValue; }
-        }
+        internal Maybe<object> DefaultValue => this.defaultValue;
 
-        public IEnumerable<string> EnumValues
-        {
-            get { return enumValues; }
-        }
+        public object Default => this.DefaultValue.GetValueOrDefault(null);
 
-        public Type ConversionType
-        {
-            get { return conversionType; }
-        }
+        public string HelpText => this.helpText;
 
-        public TargetType TargetType
-        {
-            get { return targetType; }
-        }
+        public string MetaValue => this.metaValue;
 
-        public bool Hidden
-        {
-            get { return hidden; }
-        }
+        public IEnumerable<string> EnumValues => this.enumValues;
 
-        public static Specification FromProperty(PropertyInfo property)
+        public Type ConversionType => this.conversionType;
+
+        public TargetType TargetType => this.targetType;
+
+        public bool Hidden => this.hidden;
+
+        internal static Specification FromProperty(PropertyInfo property)
         {       
             var attrs = property.GetCustomAttributes(true);
             var oa = attrs.OfType<OptionAttribute>();
