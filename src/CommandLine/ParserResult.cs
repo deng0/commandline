@@ -170,9 +170,10 @@ namespace CommandLine
         /// <summary>
         /// Creates a new <see cref="NotParsed{T}"/> object from an array of <see cref="Error"/>s.
         /// </summary>
+        /// <param name="type">The type.</param>
         /// <param name="errors">The <see cref="Error"/>s that should be contained in the <see cref="ParserResult{T}"/>.</param>
         /// <returns>A new <see cref="NotParsed{T}"/> instance.</returns>
-        public static NotParsed<T> FromErrorList(params Error[] errors) => new NotParsed<T>(typeof(T).ToTypeInfo(), errors);
+        public static NotParsed<T> FromErrorList(Type type, params Error[] errors) => new NotParsed<T>(type.ToTypeInfo(), errors);
 
         /// <summary>
         /// Gets the sequence of parsing errors.

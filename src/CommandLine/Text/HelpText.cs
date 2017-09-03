@@ -31,6 +31,7 @@ namespace CommandLine.Text
         private StringBuilder optionsHelp;
         private bool addDashesToOption;
         private bool addEnumValuesToHelpText;
+        private bool addHelpAndVersionCommands = true;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandLine.Text.HelpText"/> class.
@@ -184,6 +185,15 @@ namespace CommandLine.Text
         }
 
         /// <summary>
+        /// Gets or sets a value indicating whether to add Help and Version Commands.
+        /// </summary>
+        public bool AddHelpAndVersionCommands
+        {
+            get { return this.addHelpAndVersionCommands; }
+            set { this.addHelpAndVersionCommands = value; }
+        }
+
+        /// <summary>
         /// Gets the <see cref="SentenceBuilder"/> instance specified in constructor.
         /// </summary>
         public SentenceBuilder SentenceBuilder
@@ -192,32 +202,44 @@ namespace CommandLine.Text
         }
 
         /// <summary>
-        /// Creates a new instance of the <see cref="CommandLine.Text.HelpText"/> class using common defaults.
+        /// Creates a new instance of the <see cref="CommandLine.Text.HelpText" /> class using common defaults.
         /// </summary>
-        /// <returns>
-        /// An instance of <see cref="CommandLine.Text.HelpText"/> class.
-        /// </returns>
-        /// <param name='parserResult'>The <see cref="CommandLine.ParserResult{T}"/> containing the instance that collected command line arguments parsed with <see cref="CommandLine.Parser"/> class.</param>
-        /// <param name='onError'>A delegate used to customize the text block of reporting parsing errors text block.</param>
-        /// <param name='onExample'>A delegate used to customize <see cref="CommandLine.Text.Example"/> model used to render text block of usage examples.</param>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="parserResult">The <see cref="CommandLine.ParserResult{T}" /> containing the instance that collected command line arguments parsed with <see cref="CommandLine.Parser" /> class.</param>
+        /// <param name="onError">A delegate used to customize the text block of reporting parsing errors text block.</param>
+        /// <param name="onExample">A delegate used to customize <see cref="CommandLine.Text.Example" /> model used to render text block of usage examples.</param>
         /// <param name="verbsIndex">If true the output style is consistent with verb commands (no dashes), otherwise it outputs options.</param>
+        /// <param name="additionalOptions">The additional options.</param>
         /// <param name="maxDisplayWidth">The maximum width of the display.</param>
-        /// <remarks>The parameter <paramref name="verbsIndex"/> is not ontly a metter of formatting, it controls whether to handle verbs or options.</remarks>
+        /// <param name="addHelpAndVersionCommands">if set to <c>true</c> help and version commands are added.</param>
+        /// <param name="sentenceBuilder">The sentence builder.</param>
+        /// <returns>
+        /// An instance of <see cref="CommandLine.Text.HelpText" /> class.
+        /// </returns>
+        /// <remarks>
+        /// The parameter <paramref name="verbsIndex" /> is not ontly a metter of formatting, it controls whether to handle verbs or options.
+        /// </remarks>
         public static HelpText AutoBuild<T>(
             ParserResult<T> parserResult,
             Func<HelpText, HelpText> onError,
             Func<Example, Example> onExample,
             bool verbsIndex = false,
             IEnumerable<Specification> additionalOptions = null,
-            int maxDisplayWidth = DefaultMaximumLength)
+            int maxDisplayWidth = DefaultMaximumLength,
+            bool addHelpAndVersionCommands = true,
+            SentenceBuilder sentenceBuilder = null,
+            UnParser unParser = null)
         {
-            var auto = new HelpText
+            sentenceBuilder = sentenceBuilder ?? SentenceBuilder.Create();
+            unParser = unParser ?? new UnParser();
+            var auto = new HelpText(sentenceBuilder)
             {
                 Heading = HeadingInfo.Empty,
                 Copyright = CopyrightInfo.Empty,
                 AdditionalNewLineAfterOption = true,
                 AddDashesToOption = !verbsIndex,
-                MaximumDisplayWidth = maxDisplayWidth
+                MaximumDisplayWidth = maxDisplayWidth,
+                AddHelpAndVersionCommands = addHelpAndVersionCommands
             };
 
             try
@@ -244,13 +266,18 @@ namespace CommandLine.Text
                 .Do(license => license.AddToHelpText(auto, true));
 
             var usageAttr = ReflectionHelper.GetAttribute<AssemblyUsageAttribute>();
-            var usageLines = HelpText.RenderUsageTextAsLines(parserResult, onExample).ToMaybe();
+            var usageLines = HelpText.RenderUsageTextAsLines(unParser, parserResult, onExample).ToMaybe();
 
             if (usageAttr.IsJust() || usageLines.IsJust())
             {
+                auto.preOptionsHelp.AppendWhen(auto.preOptionsHelp.Length > 0, Environment.NewLine, Environment.NewLine);
+
                 var heading = auto.SentenceBuilder.UsageHeadingText();
                 if (heading.Length > 0)
+                {
                     auto.AddPreOptionsLine(heading);
+                    auto.AddPreOptionsLine(string.Empty);
+                }
             }
 
             usageAttr.Do(
@@ -272,34 +299,42 @@ namespace CommandLine.Text
         }
 
         /// <summary>
-        /// Creates a new instance of the <see cref="CommandLine.Text.HelpText"/> class,
+        /// Creates a new instance of the <see cref="CommandLine.Text.HelpText" /> class,
         /// automatically handling verbs or options scenario.
         /// </summary>
-        /// <param name='parserResult'>The <see cref="CommandLine.ParserResult{T}"/> containing the instance that collected command line arguments parsed with <see cref="CommandLine.Parser"/> class.</param>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="parserResult">The <see cref="CommandLine.ParserResult{T}" /> containing the instance that collected command line arguments parsed with <see cref="CommandLine.Parser" /> class.</param>
         /// <param name="maxDisplayWidth">The maximum width of the display.</param>
+        /// <param name="additionalOptions">The additional options.</param>
+        /// <param name="addHelpAndVersionCommands">if set to <c>true</c> adds help and version commands.</param>
+        /// <param name="sentenceBuilder">The sentence builder.</param>
         /// <returns>
-        /// An instance of <see cref="CommandLine.Text.HelpText"/> class.
+        /// An instance of <see cref="CommandLine.Text.HelpText" /> class.
         /// </returns>
-        /// <remarks>This feature is meant to be invoked automatically by the parser, setting the HelpWriter property
-        /// of <see cref="CommandLine.ParserSettings"/>.</remarks>
-        public static HelpText AutoBuild<T>(ParserResult<T> parserResult, int maxDisplayWidth = DefaultMaximumLength, IEnumerable<Specification> additionalOptions = null)
+        /// <exception cref="ArgumentException">Excepting NotParsed<T> type. - parserResult</exception>
+        /// <remarks>
+        /// This feature is meant to be invoked automatically by the parser, setting the HelpWriter property
+        /// of <see cref="CommandLine.ParserSettings" />.
+        /// </remarks>
+        public static HelpText AutoBuild<T>(ParserResult<T> parserResult, int maxDisplayWidth = DefaultMaximumLength, IEnumerable<Specification> additionalOptions = null, bool addHelpAndVersionCommands = true, SentenceBuilder sentenceBuilder = null, UnParser unParser = null)
         {
+            sentenceBuilder = sentenceBuilder ?? SentenceBuilder.Create();
             if (parserResult.Tag != ParserResultType.NotParsed)
                 throw new ArgumentException("Excepting NotParsed<T> type.", "parserResult");
 
             var errors = ((NotParsed<T>)parserResult).Errors;
 
             if (errors.Any(e => e.Tag == ErrorType.VersionRequestedError))
-                return new HelpText(HeadingInfo.Default){MaximumDisplayWidth = maxDisplayWidth }.AddPreOptionsLine(Environment.NewLine);
+                return new HelpText(sentenceBuilder, HeadingInfo.Default) { MaximumDisplayWidth = maxDisplayWidth, AddHelpAndVersionCommands = addHelpAndVersionCommands }.AddPreOptionsLine(Environment.NewLine);
 
             if (!errors.Any(e => e.Tag == ErrorType.HelpVerbRequestedError))
-                return AutoBuild(parserResult, current => DefaultParsingErrorsHandler(parserResult, current), e => e, false, additionalOptions, maxDisplayWidth);
+                return AutoBuild(parserResult, current => DefaultParsingErrorsHandler(parserResult, current), e => e, false, additionalOptions, maxDisplayWidth, addHelpAndVersionCommands, sentenceBuilder, unParser);
 
             var err = errors.OfType<HelpVerbRequestedError>().Single();
             var pr = new NotParsed<object>(TypeInfo.Create(err.Type), Enumerable.Empty<Error>());
             return err.Matched
-                ? AutoBuild(pr, current => DefaultParsingErrorsHandler(pr, current), e => e, false, additionalOptions, maxDisplayWidth)
-                : AutoBuild(parserResult, current => DefaultParsingErrorsHandler(parserResult, current), e => e, true, additionalOptions, maxDisplayWidth);
+                ? AutoBuild(pr, current => DefaultParsingErrorsHandler(pr, current), e => e, false, additionalOptions, maxDisplayWidth, addHelpAndVersionCommands, sentenceBuilder, unParser)
+                : AutoBuild(parserResult, current => DefaultParsingErrorsHandler(parserResult, current), e => e, true, additionalOptions, maxDisplayWidth, addHelpAndVersionCommands, sentenceBuilder, unParser);
         }
 
         /// <summary>
@@ -322,10 +357,19 @@ namespace CommandLine.Text
             if (errors.Empty())
                 return current;
 
-            return current
-                .AddPreOptionsLine(
-                    string.Concat(Environment.NewLine, current.SentenceBuilder.ErrorsHeadingText()))
-                .AddPreOptionsLines(errors);
+            current.AddPreOptionsLine(string.Empty)
+                .AddPreOptionsLine(string.Empty);
+
+            string errorsHeading = current.SentenceBuilder.ErrorsHeadingText();
+            if (!string.IsNullOrEmpty(errorsHeading))
+            {
+                current.AddPreOptionsLine(errorsHeading)
+                    .AddPreOptionsLine(string.Empty);
+            }
+
+            current.AddPreOptionsLines(errors);
+
+            return current;
         }
 
         /// <summary>
@@ -409,8 +453,12 @@ namespace CommandLine.Text
         /// <summary>
         /// Adds a text block with options usage string.
         /// </summary>
+        /// <typeparam name="T"></typeparam>
         /// <param name="result">A parsing computation result.</param>
-        /// <exception cref="System.ArgumentNullException">Thrown when parameter <paramref name="result"/> is null.</exception>
+        /// <param name="additionalOptions">The additional options.</param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException">result</exception>
+        /// <exception cref="System.ArgumentNullException">Thrown when parameter <paramref name="result" /> is null.</exception>
         public HelpText AddOptions<T>(ParserResult<T> result, IEnumerable<Specification> additionalOptions = null)
         {
             if (result == null) throw new ArgumentNullException("result");
@@ -513,9 +561,14 @@ namespace CommandLine.Text
             if (meaningfulErrors.Empty())
                 yield break;
 
+            bool first = true;
+
             foreach(var error in  meaningfulErrors
                 .Where(e => e.Tag != ErrorType.MutuallyExclusiveSetError))
             {
+                if (!first)
+                    yield return string.Empty;
+                first = false;
                 var line = new StringBuilder(indent.Spaces())
                     .Append(formatError(error));
                 yield return line.ToString();
@@ -526,6 +579,9 @@ namespace CommandLine.Text
                     meaningfulErrors.OfType<MutuallyExclusiveSetError>());
             if (mutuallyErrs.Length > 0)
             {
+                if (!first)
+                    yield return string.Empty;
+                
                 var lines = mutuallyErrs
                     .Split(new[] { Environment.NewLine }, StringSplitOptions.None);
                 foreach (var line in lines)
@@ -539,9 +595,9 @@ namespace CommandLine.Text
         /// <typeparam name="T">Type of parsing computation result.</typeparam>
         /// <param name="parserResult">A parsing computation result.</param>
         /// <returns>Resulting formatted text.</returns>
-        public static string RenderUsageText<T>(ParserResult<T> parserResult)
+        public static string RenderUsageText<T>(UnParser unParser, ParserResult<T> parserResult)
         {
-            return RenderUsageText(parserResult, example => example);
+            return RenderUsageText(unParser, parserResult, example => example);
         }
 
         /// <summary>
@@ -551,9 +607,9 @@ namespace CommandLine.Text
         /// <param name="parserResult">A parsing computation result.</param>
         /// <param name="mapperFunc">A mapping lambda normally used to translate text in other languages.</param>
         /// <returns>Resulting formatted text.</returns>
-        public static string RenderUsageText<T>(ParserResult<T> parserResult, Func<Example, Example> mapperFunc)
+        public static string RenderUsageText<T>(UnParser unParser, ParserResult<T> parserResult, Func<Example, Example> mapperFunc)
         {
-            return string.Join(Environment.NewLine, RenderUsageTextAsLines(parserResult, mapperFunc));
+            return string.Join(Environment.NewLine, RenderUsageTextAsLines(unParser, parserResult, mapperFunc));
         }
 
         /// <summary>
@@ -563,8 +619,9 @@ namespace CommandLine.Text
         /// <param name="parserResult">A parsing computation result.</param>
         /// <param name="mapperFunc">A mapping lambda normally used to translate text in other languages.</param>
         /// <returns>Resulting formatted text.</returns>
-        public static IEnumerable<string> RenderUsageTextAsLines<T>(ParserResult<T> parserResult, Func<Example, Example> mapperFunc)
+        public static IEnumerable<string> RenderUsageTextAsLines<T>(UnParser unParser, ParserResult<T> parserResult, Func<Example, Example> mapperFunc)
         {
+            if (unParser == null) throw new ArgumentNullException("unParser");
             if (parserResult == null) throw new ArgumentNullException("parserResult");
 
             var usage = GetUsageFromType(parserResult.TypeInfo.Current);
@@ -573,10 +630,17 @@ namespace CommandLine.Text
 
             var usageTuple = usage.FromJustOrFail();
             var examples = usageTuple.Item2;
-            var appAlias = usageTuple.Item1.ApplicationAlias ?? ReflectionHelper.GetAssemblyName();
+            var appAlias = unParser.IncludeApplicationAlias? usageTuple.Item1.ApplicationAlias ?? ReflectionHelper.GetAssemblyName() : String.Empty;
+
+            bool first = true;
 
             foreach (var e in examples)
             {
+                if (!first)
+                {
+                    yield return string.Empty;
+                }
+                first = false;
                 var example = mapperFunc(e);
                 var exampleText = new StringBuilder(example.HelpText)
                     .Append(':');
@@ -587,7 +651,7 @@ namespace CommandLine.Text
                     var commandLine = new StringBuilder(2.Spaces())
                         .Append(appAlias)
                         .Append(' ')
-                        .Append(Parser.Default.FormatCommandLine(example.Sample,
+                        .Append(unParser.FormatCommandLine(example.Sample,
                             config =>
                             {
                                 config.PreferShortName = s.PreferShortName;
@@ -678,8 +742,9 @@ namespace CommandLine.Text
         {
             var specs = type.GetSpecifications(Specification.FromProperty);
             var optionSpecs = specs
-                .OfType<OptionSpecification>()
-                .Concat(new[] { MakeHelpEntry(), MakeVersionEntry() });
+                .OfType<OptionSpecification>();
+            if (addHelpAndVersionCommands)
+                optionSpecs = optionSpecs.Concat(new[] {MakeHelpEntry(), MakeVersionEntry()});
             var valueSpecs = specs
                 .OfType<ValueSpecification>()
                 .OrderBy(v => v.Index);
@@ -709,15 +774,18 @@ namespace CommandLine.Text
 
         private IEnumerable<Specification> AdaptVerbsToSpecifications(IEnumerable<Type> types)
         {
-            return (from verbTuple in Verb.SelectFromTypes(types)
-                    select
-                        OptionSpecification.NewSwitch(
-                            string.Empty,
-                            verbTuple.Item1.Name,
-                            false,
-                            verbTuple.Item1.HelpText,
-                            string.Empty,
-                            verbTuple.Item1.Hidden)).Concat(new[] { MakeHelpEntry(), MakeVersionEntry() });
+            var specs = from verbTuple in Verb.SelectFromTypes(types)
+                select
+                    OptionSpecification.NewSwitch(
+                        string.Empty,
+                        verbTuple.Item1.Name,
+                        false,
+                        verbTuple.Item1.HelpText,
+                        string.Empty,
+                        verbTuple.Item1.Hidden);
+            if (addHelpAndVersionCommands)
+                specs = specs.Concat(new[] {MakeHelpEntry(), MakeVersionEntry()});
+            return specs;
         }
 
         private HelpText AddOptionsImpl(

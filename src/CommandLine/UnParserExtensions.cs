@@ -70,30 +70,32 @@ namespace CommandLine
     /// <summary>
     /// Provides overloads to unparse options instance.
     /// </summary>
-    public static class UnParserExtensions
+    public class UnParser
     {
+        public bool EnableDashDash { get; set; } = true;
+
+        public bool IncludeApplicationAlias { get; set; } = true;
+        
         /// <summary>
         /// Format a command line argument string from a parsed instance. 
         /// </summary>
         /// <typeparam name="T">Type of <paramref name="options"/>.</typeparam>
-        /// <param name="parser">Parser instance.</param>
         /// <param name="options">A parsed (or manually correctly constructed instance).</param>
         /// <returns>A string with command line arguments.</returns>
-        public static string FormatCommandLine<T>(this Parser parser, T options)
+        public string FormatCommandLine<T>(T options)
         {
-            return parser.FormatCommandLine(options, config => {});
+            return FormatCommandLine(options, config => {});
         }
 
         /// <summary>
         /// Format a command line argument string from a parsed instance. 
         /// </summary>
         /// <typeparam name="T">Type of <paramref name="options"/>.</typeparam>
-        /// <param name="parser">Parser instance.</param>
         /// <param name="options">A parsed (or manually correctly constructed instance).</param>
         /// <param name="configuration">The <see cref="Action{UnParserSettings}"/> lambda used to configure
         /// aspects and behaviors of the unparsersing process.</param>
         /// <returns>A string with command line arguments.</returns>
-        public static string FormatCommandLine<T>(this Parser parser, T options, Action<UnParserSettings> configuration)
+        public virtual string FormatCommandLine<T>(T options, Action<UnParserSettings> configuration)
         {
             if (options == null) throw new ArgumentNullException("options");
 
@@ -119,14 +121,14 @@ namespace CommandLine
             var allOptSpecs = from info in specs.Where(i => i.Specification.Tag == SpecificationType.Option)
                 let o = (OptionSpecification)info.Specification
                 where o.TargetType != TargetType.Switch || (o.TargetType == TargetType.Switch && ((bool)info.Value))
-                orderby o.UniqueName()
+                //orderby o.UniqueName()
                 select info;
 
             var shortSwitches = from info in allOptSpecs
                 let o = (OptionSpecification)info.Specification
                 where o.TargetType == TargetType.Switch
                 where o.ShortName.Length > 0
-                orderby o.UniqueName()
+                //orderby o.UniqueName()
                 select info;
 
             var optSpecs = settings.GroupSwitches
@@ -145,11 +147,11 @@ namespace CommandLine
             optSpecs.ForEach(
                 opt =>
                     builder
-                        .Append(FormatOption((OptionSpecification)opt.Specification, opt.Value, settings))
+                        .Append(((OptionSpecification)opt.Specification).FormatOption(opt.Value, settings))
                         .Append(' ')
                 );
 
-            builder.AppendWhen(valSpecs.Any() && parser.Settings.EnableDashDash, "-- ");
+            builder.AppendWhen(valSpecs.Any() && this.EnableDashDash, "-- ");
 
             valSpecs.ForEach(
                 val => builder.Append(FormatValue(val.Specification, val.Value)).Append(' '));
@@ -158,7 +160,7 @@ namespace CommandLine
                 .ToString().TrimEnd(' ');
         }
 
-        private static string FormatValue(Specification spec, object value)
+        internal static string FormatValue(Specification spec, object value)
         {
             var builder = new StringBuilder();
             switch (spec.TargetType)
@@ -179,32 +181,40 @@ namespace CommandLine
             return builder.ToString();
         }
 
-        private static object FormatWithQuotesIfString(object value)
+        internal static object FormatWithQuotesIfString(object value)
         {
             Func<string, string> doubQt = v
                 => v.Contains("\"") ? v.Replace("\"", "\\\"") : v;
+
+            if (value != null && Type.GetTypeCode(value.GetType()) == TypeCode.Object)
+            {
+                value = value.ToString();
+            }
 
             return (value as string)
                 .ToMaybe()
                 .MapValueOrDefault(v => v.Contains(' ') || v.Contains("\"")
                     ? "\"".JoinTo(doubQt(v), "\"") : v, value);
         }
+    }
 
-        private static char SeperatorOrSpace(this Specification spec)
+    internal static class UnParserHelperExtensions
+    {
+        internal static char SeperatorOrSpace(this Specification spec)
         {
             return (spec as OptionSpecification).ToMaybe()
                 .MapValueOrDefault(o => o.Separator != '\0' ? o.Separator : ' ', ' ');
         }
 
-        private static string FormatOption(OptionSpecification spec, object value, UnParserSettings settings)
+        internal static string FormatOption(this OptionSpecification spec, object value, UnParserSettings settings)
         {
             return new StringBuilder()
                     .Append(spec.FormatName(settings))
-                    .AppendWhen(spec.TargetType != TargetType.Switch, FormatValue(spec, value))
+                    .AppendWhen(spec.TargetType != TargetType.Switch, UnParser.FormatValue(spec, value))
                 .ToString();
         }
 
-        private static string FormatName(this OptionSpecification optionSpec, UnParserSettings settings)
+        internal static string FormatName(this OptionSpecification optionSpec, UnParserSettings settings)
         {
             var longName =
                 optionSpec.LongName.Length > 0
@@ -218,7 +228,7 @@ namespace CommandLine
                     .ToString();
         }
 
-        private static object NormalizeValue(this object value)
+        internal static object NormalizeValue(this object value)
         {
 #if !SKIP_FSHARP
             if (value != null
@@ -231,7 +241,7 @@ namespace CommandLine
             return value;
         }
 
-        private static bool IsEmpty(this object value)
+        internal static bool IsEmpty(this object value)
         {
             if (value == null) return true;
 #if !SKIP_FSHARP

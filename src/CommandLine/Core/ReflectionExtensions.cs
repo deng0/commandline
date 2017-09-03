@@ -22,7 +22,7 @@ namespace CommandLine.Core
                        attrs.OfType<OptionAttribute>().Any() ||
                        attrs.OfType<ValueAttribute>().Any()
                    group pi by pi.Name into g
-                   select selector(g.First());
+                   select selector(g.Last());
         }
 
         public static Maybe<VerbAttribute> GetVerbSpecification(this Type type)
@@ -32,7 +32,7 @@ namespace CommandLine.Core
                  type.FlattenHierarchy().SelectMany(x => x.GetTypeInfo().GetCustomAttributes(typeof(VerbAttribute), true))
                  let vattr = (VerbAttribute)attr
                  select vattr)
-                    .SingleOrDefault()
+                    .LastOrDefault()
                     .ToMaybe();
         }
 
@@ -43,7 +43,7 @@ namespace CommandLine.Core
                     let attrs = pi.GetCustomAttributes(true)
                     where attrs.OfType<UsageAttribute>().Any()
                     select Tuple.Create(pi, (UsageAttribute)attrs.First()))
-                        .SingleOrDefault()
+                        .LastOrDefault()
                         .ToMaybe();
         }
 
@@ -53,15 +53,15 @@ namespace CommandLine.Core
             {
                 yield break;
             }
-            yield return type;
-            foreach (var @interface in type.SafeGetInterfaces())
-            {
-                yield return @interface;
-            }
             foreach (var @interface in FlattenHierarchy(type.GetTypeInfo().BaseType))
             {
                 yield return @interface;
             }
+            foreach (var @interface in type.SafeGetInterfaces())
+            {
+                yield return @interface;
+            }
+            yield return type;
         }
 
         private static IEnumerable<Type> SafeGetInterfaces(this Type type)
