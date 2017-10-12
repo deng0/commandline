@@ -94,7 +94,7 @@ namespace CommandLine.Core
                                 sp =>
                                     sp.Value.IsNothing() && sp.Specification.TargetType == TargetType.Sequence
                                     && sp.Specification.DefaultValue.MatchNothing(),
-                                sp => sp.Property.PropertyType.GetTypeInfo().GetGenericArguments().Single().CreateEmptyArray());
+                                sp => sp.Property.PropertyType.GetTypeInfo().GetGenericArguments().Single().CreateEmptyList());
                     return mutable;
                 };
 

@@ -1,6 +1,7 @@
 ﻿// Copyright 2005-2015 Giacomo Stelluti Scala & Contributors. All rights reserved. See License.md in the project root for license information.
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using CSharpx;
@@ -102,8 +103,8 @@ namespace CommandLine.Core
                         .Where(sp => sp.Specification.TargetType == TargetType.Sequence)
                         .Where(sp => sp.Value.IsJust())
                         .Where(sp =>
-                            (sp.Specification.Min.IsJust() && ((Array)sp.Value.FromJustOrFail()).Length < sp.Specification.Min.FromJustOrFail())
-                            || (sp.Specification.Max.IsJust() && ((Array)sp.Value.FromJustOrFail()).Length > sp.Specification.Max.FromJustOrFail())
+                            (sp.Specification.Min.IsJust() && ((IList)sp.Value.FromJustOrFail()).Count < sp.Specification.Min.FromJustOrFail())
+                            || (sp.Specification.Max.IsJust() && ((IList)sp.Value.FromJustOrFail()).Count > sp.Specification.Max.FromJustOrFail())
                         );
                     if (options.Any())
                     {

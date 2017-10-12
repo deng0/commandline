@@ -25,20 +25,17 @@ namespace CommandLine.Core
 
         private static Maybe<object> ChangeTypeSequence(IEnumerable<string> values, Type conversionType, CultureInfo conversionCulture, bool ignoreValueCase)
         {
-            var type =
-                conversionType.GetTypeInfo()
-                              .GetGenericArguments()
-                              .SingleOrDefault()
-                              .ToMaybe()
-                              .FromJustOrFail(
-                                  new InvalidOperationException("Non scalar properties should be sequence of type IEnumerable<T>.")
-                    );
+            if (!conversionType.GetTypeInfo().IsGenericType ||
+                conversionType.GetTypeInfo().GetGenericTypeDefinition() != typeof(List<>))
+                throw new InvalidOperationException("Sequence properties should be of type List<T>.");
+
+            var type = conversionType.GetTypeInfo().GetGenericArguments()[0];
 
             var converted = values.Select(value => ChangeTypeScalar(value, type, conversionCulture, ignoreValueCase));
 
             return converted.Any(a => a.MatchNothing())
                 ? Maybe.Nothing<object>()
-                : Maybe.Just(converted.Select(c => ((Just<object>)c).Value).ToUntypedArray(type));
+                : Maybe.Just(converted.Select(c => ((Just<object>)c).Value).ToTypedList(type));
         }
 
         private static Maybe<object> ChangeTypeScalar(string value, Type conversionType, CultureInfo conversionCulture, bool ignoreValueCase)

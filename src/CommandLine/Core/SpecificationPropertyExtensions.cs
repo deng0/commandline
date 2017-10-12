@@ -32,11 +32,12 @@ namespace CommandLine.Core
             switch (specProp.Specification.TargetType)
             {
                 case TargetType.Sequence:
-                    return specProp.Property.PropertyType.GetTypeInfo().GetGenericArguments()
-                             .SingleOrDefault()
-                             .ToMaybe()
-                             .FromJustOrFail(
-                                 new InvalidOperationException("Sequence properties should be of type IEnumerable<T>."));
+                    if (!specProp.Property.PropertyType.GetTypeInfo().IsGenericType ||
+                        specProp.Property.PropertyType.GetTypeInfo().GetGenericTypeDefinition() != typeof(List<>))
+                        throw new InvalidOperationException("Sequence properties should be of type List<T>.");
+
+                    return specProp.Property.PropertyType.GetTypeInfo().GetGenericArguments()[0];
+
                 default:
                     return specProp.Property.PropertyType;
             }

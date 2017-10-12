@@ -1,6 +1,7 @@
 ﻿// Copyright 2005-2015 Giacomo Stelluti Scala & Contributors. All rights reserved. See License.md in the project root for license information.
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -27,6 +28,17 @@ namespace CommandLine.Infrastructure
             var array = Array.CreateInstance(type, value.Count());
             value.ToArray().CopyTo(array, 0);
             return array;
+        }
+
+        public static object ToTypedList(this IEnumerable<object> value, Type type)
+        {
+            IList list = (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(type));
+            foreach (object obj in value)
+            {
+                list.Add(obj);
+            }
+
+            return list;
         }
 
         public static bool Empty<TSource>(this IEnumerable<TSource> source)

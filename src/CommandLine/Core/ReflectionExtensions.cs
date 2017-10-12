@@ -132,6 +132,11 @@ namespace CommandLine.Core
             return Array.CreateInstance(type, 0);
         }
 
+        public static IList CreateEmptyList(this Type type)
+        {
+            return (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(type));
+        }
+
         public static object GetDefaultValue(this Type type)
         {
             var e = Expression.Lambda<Func<object>>(
@@ -157,9 +162,9 @@ namespace CommandLine.Core
             {
                 return string.Empty;
             }
-            if (type.GetTypeInfo().IsGenericType && type.GetTypeInfo().GetGenericTypeDefinition() == typeof(IEnumerable<>))
+            if (type.GetTypeInfo().IsGenericType && type.GetTypeInfo().GetGenericTypeDefinition() == typeof(List<>))
             {
-                return type.GetTypeInfo().GetGenericArguments()[0].CreateEmptyArray();
+                return type.GetTypeInfo().GetGenericArguments()[0].CreateEmptyList();
             }
             return type.GetDefaultValue();
         }
