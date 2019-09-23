@@ -47,85 +47,100 @@ namespace CommandLine.Core
 
             Func<ParserResult<T>> buildUp = () =>
             {
-                var tokenizerResult = tokenizer(arguments, optionSpecs);
+                var disposableOptions = new List<IDisposable>();
 
-                var tokens = tokenizerResult.SucceededWith();
+                try
+                {
+                    var tokenizerResult = tokenizer(arguments, optionSpecs);
 
-                var partitions = TokenPartitioner.Partition(
-                    tokens,
-                    name => TypeLookup.FindTypeDescriptorAndSibling(name, optionSpecs, nameComparer));
-                var optionsPartition = partitions.Item1;
-                var valuesPartition = partitions.Item2;
-                var errorsPartition = partitions.Item3;
+                    var tokens = tokenizerResult.SucceededWith();
 
-                var optionSpecPropsResult =
-                    OptionMapper.MapValues(
+                    var partitions = TokenPartitioner.Partition(
+                        tokens,
+                        name => TypeLookup.FindTypeDescriptorAndSibling(name, optionSpecs, nameComparer));
+                    var optionsPartition = partitions.Item1;
+                    var valuesPartition = partitions.Item2;
+                    var errorsPartition = partitions.Item3;
+
+                    var optionSpecPropsResult = OptionMapper.MapValues(
                         (from pt in specProps where pt.Specification.IsOption() select pt),
                         optionsPartition,
                         (vals, type, isScalar) => TypeConverter.ChangeType(vals, type, isScalar, parsingCulture, ignoreValueCase),
                         nameComparer);
 
-                var valueSpecPropsResult =
-                    ValueMapper.MapValues(
+                    var valueSpecPropsResult = ValueMapper.MapValues(
                         (from pt in specProps where pt.Specification.IsValue() orderby ((ValueSpecification)pt.Specification).Index select pt),
                         valuesPartition,
                         (vals, type, isScalar) => TypeConverter.ChangeType(vals, type, isScalar, parsingCulture, ignoreValueCase));
 
-                var missingValueErrors = from token in errorsPartition
-                                         select
-                        new MissingValueOptionError(
-                            optionSpecs.Single(o => token.Text.MatchName(o.ShortName, o.LongName, nameComparer))
-                                .FromOptionSpecification());
+                    var missingValueErrors = from token in errorsPartition
+                                             select new MissingValueOptionError(
+                                                 optionSpecs.Single(o => token.Text.MatchName(o.ShortName, o.LongName, nameComparer))
+                                                            .FromOptionSpecification());
 
-                var specPropsWithValue =
-                    optionSpecPropsResult.SucceededWith().Concat(valueSpecPropsResult.SucceededWith()).Memorize();
+                    var specPropsWithValue = optionSpecPropsResult.SucceededWith().Concat(valueSpecPropsResult.SucceededWith()).Memorize();
 
-                Func<T> buildMutable = () =>
+                    TV addDisposableToList<TV>(TV val)
+                    {
+                        if (val is IDisposable disposable)
+                        {
+                            disposableOptions.Add(disposable);
+                        }
+                        return val;
+                    }
+
+                    Func<T> buildMutable = () =>
+                    {
+                        var mutable = factory.MapValueOrDefault(f => f(), (T)Activator.CreateInstance(typeInfo));
+                        mutable = mutable.SetProperties(specPropsWithValue, sp => sp.Value.IsJust(), sp => addDisposableToList(sp.Value.FromJustOrFail()))
+                                         .SetProperties(
+                                             specPropsWithValue,
+                                             sp => sp.Value.IsNothing() && sp.Specification.DefaultValue.IsJust(),
+                                             sp => addDisposableToList(sp.Specification.DefaultValue.FromJustOrFail()))
+                                         .SetProperties(
+                                             specPropsWithValue,
+                                             sp => sp.Value.IsNothing()
+                                                   && sp.Specification.TargetType == TargetType.Sequence
+                                                   && sp.Specification.DefaultValue.MatchNothing(),
+                                             sp => addDisposableToList(sp.Property.PropertyType.GetTypeInfo().GetGenericArguments().Single().CreateEmptyList()));
+                        return mutable;
+                    };
+
+                    Func<T> buildImmutable = () =>
+                    {
+                        var ctor = typeInfo.GetTypeInfo().GetConstructor((from sp in specProps select sp.Property.PropertyType).ToArray());
+                        var values = (from prms in ctor.GetParameters()
+                                      join sp in specPropsWithValue on prms.Name.ToLower() equals sp.Property.Name.ToLower()
+                                      select addDisposableToList(sp.Value.GetValueOrDefault(
+                                          sp.Specification.DefaultValue.GetValueOrDefault(
+                                              sp.Specification.ConversionType.CreateDefaultForImmutable())))).ToArray();
+
+                        disposableOptions.AddRange(values.OfType<IDisposable>());
+
+                        var immutable = (T)ctor.Invoke(values);
+                        return immutable;
+                    };
+
+                    var instance = isMutable ? buildMutable() : buildImmutable();
+
+                    var validationErrors = specPropsWithValue.Validate(SpecificationPropertyRules.Lookup(tokens));
+
+                    var allErrors = tokenizerResult.SuccessfulMessages()
+                                                   .Concat(missingValueErrors)
+                                                   .Concat(optionSpecPropsResult.SuccessfulMessages())
+                                                   .Concat(valueSpecPropsResult.SuccessfulMessages())
+                                                   .Concat(validationErrors)
+                                                   .Memorize();
+
+                    var warnings = from e in allErrors where nonFatalErrors.Contains(e.Tag) select e;
+
+                    return allErrors.Except(warnings).ToParserResult(instance, disposableOptions);
+                }
+                catch
                 {
-                    var mutable = factory.MapValueOrDefault(f => f(), (T)Activator.CreateInstance(typeInfo));
-                    mutable =
-                        mutable.SetProperties(specPropsWithValue, sp => sp.Value.IsJust(), sp => sp.Value.FromJustOrFail())
-                            .SetProperties(
-                                specPropsWithValue,
-                                sp => sp.Value.IsNothing() && sp.Specification.DefaultValue.IsJust(),
-                                sp => sp.Specification.DefaultValue.FromJustOrFail())
-                            .SetProperties(
-                                specPropsWithValue,
-                                sp =>
-                                    sp.Value.IsNothing() && sp.Specification.TargetType == TargetType.Sequence
-                                    && sp.Specification.DefaultValue.MatchNothing(),
-                                sp => sp.Property.PropertyType.GetTypeInfo().GetGenericArguments().Single().CreateEmptyList());
-                    return mutable;
-                };
-
-                Func<T> buildImmutable = () =>
-                {
-                    var ctor = typeInfo.GetTypeInfo().GetConstructor((from sp in specProps select sp.Property.PropertyType).ToArray());
-                    var values = (from prms in ctor.GetParameters()
-                        join sp in specPropsWithValue on prms.Name.ToLower() equals sp.Property.Name.ToLower()
-                        select
-                            sp.Value.GetValueOrDefault(
-                                sp.Specification.DefaultValue.GetValueOrDefault(
-                                    sp.Specification.ConversionType.CreateDefaultForImmutable()))).ToArray();
-                    var immutable = (T)ctor.Invoke(values);
-                    return immutable;
-                };
-
-                var instance = isMutable ? buildMutable() : buildImmutable();
-                
-                var validationErrors = specPropsWithValue.Validate(SpecificationPropertyRules.Lookup(tokens));
-
-                var allErrors =
-                    tokenizerResult.SuccessfulMessages()
-                        .Concat(missingValueErrors)
-                        .Concat(optionSpecPropsResult.SuccessfulMessages())
-                        .Concat(valueSpecPropsResult.SuccessfulMessages())
-                        .Concat(validationErrors)
-                        .Memorize();
-
-                var warnings = from e in allErrors where nonFatalErrors.Contains(e.Tag) select e;
-
-                return allErrors.Except(warnings).ToParserResult(instance);
+                    disposableOptions.ForEach(d => d.Dispose());
+                    throw;
+                }
             };
 
             var preprocessorErrors = arguments.Any()

@@ -10,7 +10,7 @@ namespace CommandLine
     sealed class TypeInfo
     {
         private readonly Type current;
-        private readonly IEnumerable<Type> choices; 
+        private readonly IEnumerable<Type> choices;
 
         private TypeInfo(Type current, IEnumerable<Type> choices)
         {
@@ -91,15 +91,17 @@ namespace CommandLine
     public sealed class Parsed<T> : ParserResult<T>, IEquatable<Parsed<T>>
     {
         private readonly T value;
+        private readonly List<IDisposable> disposableOptions;
 
-        internal Parsed(T value, TypeInfo typeInfo)
+        internal Parsed(T value, TypeInfo typeInfo, List<IDisposable> disposableOptions)
             : base(ParserResultType.Parsed, typeInfo)
         {
             this.value = value;
+            this.disposableOptions = disposableOptions;
         }
 
-        internal Parsed(T value)
-            : this(value, TypeInfo.Create(value.GetType()))
+        internal Parsed(T value, List<IDisposable> disposableOptions)
+            : this(value, TypeInfo.Create(value.GetType()), disposableOptions)
         {
         }
 
@@ -110,6 +112,8 @@ namespace CommandLine
         {
             get { return value; }
         }
+
+        public List<IDisposable> DisposableOptions => this.disposableOptions;
 
         /// <summary>
         /// Determines whether the specified <see cref="System.Object"/> is equal to the current <see cref="System.Object"/>.

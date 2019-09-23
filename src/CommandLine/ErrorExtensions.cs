@@ -1,5 +1,6 @@
 ﻿// Copyright 2005-2015 Giacomo Stelluti Scala & Contributors. All rights reserved. See License.md in the project root for license information.
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using CommandLine.Core;
@@ -9,11 +10,24 @@ namespace CommandLine
 {
     static class ErrorExtensions
     {
-        public static ParserResult<T> ToParserResult<T>(this IEnumerable<Error> errors, T instance)
+        public static ParserResult<T> ToParserResult<T>(this IEnumerable<Error> errors, T instance, List<IDisposable> disposableOptions)
         {
-            return errors.Any()
-                ? (ParserResult<T>)new NotParsed<T>(instance.GetType().ToTypeInfo(), errors)
-                : (ParserResult<T>)new Parsed<T>(instance);
+            if (errors.Any())
+            {
+                try
+                {
+                    disposableOptions.ForEach(d => d.Dispose());
+                }
+                catch
+                {
+                }
+
+                return new NotParsed<T>(instance.GetType().ToTypeInfo(), errors);
+            }
+            else
+            {
+                return new Parsed<T>(instance, disposableOptions);
+            }
         }
 
         public static IEnumerable<Error> OnlyMeaningfulOnes(this IEnumerable<Error> errors)
