@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using CommandLine.Core;
@@ -166,7 +167,7 @@ namespace CommandLine
             switch (spec.TargetType)
             {
                 case TargetType.Scalar:
-                    builder.Append(FormatWithQuotesIfString(value));
+                    builder.Append(Convert.ToString(FormatWithQuotesIfString(value), CultureInfo.InvariantCulture));
                     break;
                 case TargetType.Sequence:
                     var sep = spec.SeperatorOrSpace();
@@ -174,7 +175,7 @@ namespace CommandLine
                         => sep == ' ' ? FormatWithQuotesIfString(v) : v;
                     var e = ((IEnumerable)value).GetEnumerator();
                     while (e.MoveNext())
-                        builder.Append(format(e.Current)).Append(sep);
+                        builder.Append(Convert.ToString(format(e.Current), CultureInfo.InvariantCulture)).Append(sep);
                     builder.TrimEndIfMatch(sep);
                     break;
             }
