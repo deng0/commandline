@@ -76,7 +76,7 @@ namespace CommandLine
         public bool EnableDashDash { get; set; } = true;
 
         public bool IncludeApplicationAlias { get; set; } = true;
-        
+
         /// <summary>
         /// Format a command line argument string from a parsed instance. 
         /// </summary>
@@ -85,7 +85,7 @@ namespace CommandLine
         /// <returns>A string with command line arguments.</returns>
         public string FormatCommandLine<T>(T options)
         {
-            return FormatCommandLine(options, config => {});
+            return FormatCommandLine(options, config => { });
         }
 
         /// <summary>
@@ -113,33 +113,37 @@ namespace CommandLine
             var specs =
                 (from info in
                     type.GetSpecifications(
-                        pi => new { Specification = Specification.FromProperty(pi),
-                            Value = pi.GetValue(options, null).NormalizeValue(), PropertyValue = pi.GetValue(options, null) })
-                where !info.PropertyValue.IsEmpty()
-                select info)
+                        pi => new
+                        {
+                            Specification = Specification.FromProperty(pi),
+                            Value = pi.GetValue(options, null).NormalizeValue(),
+                            PropertyValue = pi.GetValue(options, null)
+                        })
+                 where !info.PropertyValue.IsEmpty()
+                 select info)
                     .Memorize();
 
             var allOptSpecs = from info in specs.Where(i => i.Specification.Tag == SpecificationType.Option)
-                let o = (OptionSpecification)info.Specification
-                where o.TargetType != TargetType.Switch || (o.TargetType == TargetType.Switch && ((bool)info.Value))
-                //orderby o.UniqueName()
-                select info;
+                              let o = (OptionSpecification)info.Specification
+                              where o.TargetType != TargetType.Switch || (o.TargetType == TargetType.Switch && ((bool)info.Value))
+                              //orderby o.UniqueName()
+                              select info;
 
             var shortSwitches = from info in allOptSpecs
-                let o = (OptionSpecification)info.Specification
-                where o.TargetType == TargetType.Switch
-                where o.ShortName.Length > 0
-                //orderby o.UniqueName()
-                select info;
+                                let o = (OptionSpecification)info.Specification
+                                where o.TargetType == TargetType.Switch
+                                where o.ShortName.Length > 0
+                                //orderby o.UniqueName()
+                                select info;
 
             var optSpecs = settings.GroupSwitches
                 ? allOptSpecs.Where(info => !shortSwitches.Contains(info))
                 : allOptSpecs;
 
             var valSpecs = from info in specs.Where(i => i.Specification.Tag == SpecificationType.Value)
-                let v = (ValueSpecification)info.Specification
-                orderby v.Index
-                select info;
+                           let v = (ValueSpecification)info.Specification
+                           orderby v.Index
+                           select info;
 
             builder = settings.GroupSwitches && shortSwitches.Any()
                 ? builder.Append('-').Append(string.Join(string.Empty, shortSwitches.Select(
@@ -167,35 +171,59 @@ namespace CommandLine
             switch (spec.TargetType)
             {
                 case TargetType.Scalar:
-                    builder.Append(Convert.ToString(FormatWithQuotesIfString(value), CultureInfo.InvariantCulture));
+                    builder.Append(FormatWithQuotes(value));
                     break;
                 case TargetType.Sequence:
                     var sep = spec.SeperatorOrSpace();
                     Func<object, object> format = v
-                        => sep == ' ' ? FormatWithQuotesIfString(v) : v;
+                        => sep == ' ' ? FormatWithQuotes(v) : Convert.ToString(v, CultureInfo.InvariantCulture);
                     var e = ((IEnumerable)value).GetEnumerator();
                     while (e.MoveNext())
-                        builder.Append(Convert.ToString(format(e.Current), CultureInfo.InvariantCulture)).Append(sep);
+                        builder.Append(format(e.Current)).Append(sep);
                     builder.TrimEndIfMatch(sep);
                     break;
             }
             return builder.ToString();
         }
 
-        internal static object FormatWithQuotesIfString(object value)
+        internal static string FormatWithQuotes(object value)
         {
-            Func<string, string> doubQt = v
-                => v.Contains("\"") ? v.Replace("\"", "\\\"") : v;
-
-            if (value != null && Type.GetTypeCode(value.GetType()) == TypeCode.Object)
+            if (value is null)
             {
-                value = value.ToString();
+                return string.Empty;
             }
 
-            return (value as string)
-                .ToMaybe()
-                .MapValueOrDefault(v => v.Contains(' ') || v.Contains("\"")
-                    ? "\"".JoinTo(doubQt(v), "\"") : v, value);
+            string strVal;
+
+            if (value is string str)
+            {
+                strVal = str;
+            }
+            else if (Type.GetTypeCode(value.GetType()) == TypeCode.Object)
+            {
+                strVal = value.ToString();
+            }
+            else
+            {
+                strVal = Convert.ToString(value, CultureInfo.InvariantCulture);
+            }
+
+            if (string.IsNullOrEmpty(strVal))
+            {
+                return string.Empty;
+            }
+
+            if (strVal.Contains("\""))
+            {
+                strVal = strVal.Replace("\"", "\\\"");
+            }
+
+            if (strVal.Contains(' '))
+            {
+                strVal = "\"" + strVal + "\"";
+            }
+
+            return strVal;
         }
     }
 
