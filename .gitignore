@@ -45,3 +45,6 @@ artifacts/*
 *.nuget.props
 *.DotSettings.user
 
+
+/ConsoleApp1/bin/
+/ConsoleApp1/obj/

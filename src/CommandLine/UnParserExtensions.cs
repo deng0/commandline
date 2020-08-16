@@ -119,7 +119,7 @@ namespace CommandLine
                             Value = pi.GetValue(options, null).NormalizeValue(),
                             PropertyValue = pi.GetValue(options, null)
                         })
-                 where !info.PropertyValue.IsEmpty()
+                 where !UnParserHelperExtensions.IsDefault(info.PropertyValue, info.Specification.DefaultValue)
                  select info)
                     .Memorize();
 
@@ -270,6 +270,7 @@ namespace CommandLine
             return value;
         }
 
+        /*
         internal static bool IsEmpty(this object value)
         {
             if (value == null) return true;
@@ -279,6 +280,43 @@ namespace CommandLine
             if (value is ValueType && value.Equals(value.GetType().GetDefaultValue())) return true;
             if (value is string && ((string)value).Length == 0) return true;
             if (value is IEnumerable && !((IEnumerable)value).GetEnumerator().MoveNext()) return true;
+            return false;
+        }
+        */
+
+        internal static bool IsDefault(object value, Maybe<object> defaultValue)
+        {
+            if (value == null)
+            {
+                return defaultValue.Tag == MaybeType.Nothing;
+            }
+
+            if (value is ValueType)
+            {
+                object def;
+                if (defaultValue.MatchJust(out def))
+                {
+                    return value.Equals(def);
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
+            if (value is string str)
+            {
+                if (defaultValue.MatchJust(out object def) && def is string defStr)
+                {
+                    return string.Equals(str, defStr);
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
+            if (value is IEnumerable enumerable && defaultValue.Tag == MaybeType.Nothing && !enumerable.GetEnumerator().MoveNext()) return true;
             return false;
         }
     }

@@ -71,9 +71,9 @@ namespace CommandLine.Core
 
         public static TargetType ToTargetType(this Type type)
         {
-            return type == typeof(bool)
+            return /*type == typeof(bool)
                        ? TargetType.Switch
-                       : type == typeof(string)
+                       : */type == typeof(string)
                              ? TargetType.Scalar
                              : type.IsArray || typeof(IEnumerable).GetTypeInfo().IsAssignableFrom(type)
                                    ? TargetType.Sequence
