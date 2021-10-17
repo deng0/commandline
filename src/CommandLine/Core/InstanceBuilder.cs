@@ -65,13 +65,13 @@ namespace CommandLine.Core
                     var optionSpecPropsResult = OptionMapper.MapValues(
                         (from pt in specProps where pt.Specification.IsOption() select pt),
                         optionsPartition,
-                        (vals, type, isScalar) => TypeConverter.ChangeType(vals, type, isScalar, parsingCulture, ignoreValueCase),
+                        (vals, type, isScalar) => TypeConverter.ChangeType(vals, type, isScalar, parsingCulture, ignoreValueCase, disposableOptions),
                         nameComparer);
 
                     var valueSpecPropsResult = ValueMapper.MapValues(
                         (from pt in specProps where pt.Specification.IsValue() orderby ((ValueSpecification)pt.Specification).Index select pt),
                         valuesPartition,
-                        (vals, type, isScalar) => TypeConverter.ChangeType(vals, type, isScalar, parsingCulture, ignoreValueCase));
+                        (vals, type, isScalar) => TypeConverter.ChangeType(vals, type, isScalar, parsingCulture, ignoreValueCase, disposableOptions));
 
                     var missingValueErrors = from token in errorsPartition
                                              select new MissingValueOptionError(
@@ -80,29 +80,22 @@ namespace CommandLine.Core
 
                     var specPropsWithValue = optionSpecPropsResult.SucceededWith().Concat(valueSpecPropsResult.SucceededWith()).Memorize();
 
-                    TV addDisposableToList<TV>(TV val)
-                    {
-                        if (val is IDisposable disposable)
-                        {
-                            disposableOptions.Add(disposable);
-                        }
-                        return val;
-                    }
+
 
                     Func<T> buildMutable = () =>
                     {
                         var mutable = factory.MapValueOrDefault(f => f(), (T)Activator.CreateInstance(typeInfo));
-                        mutable = mutable.SetProperties(specPropsWithValue, sp => sp.Value.IsJust(), sp => addDisposableToList(sp.Value.FromJustOrFail()))
+                        mutable = mutable.SetProperties(specPropsWithValue, sp => sp.Value.IsJust(), sp => sp.Value.FromJustOrFail())
                                          .SetProperties(
                                              specPropsWithValue,
                                              sp => sp.Value.IsNothing() && sp.Specification.DefaultValue.IsJust(),
-                                             sp => addDisposableToList(sp.Specification.DefaultValue.FromJustOrFail()))
+                                             sp => sp.Specification.DefaultValue.FromJustOrFail())
                                          .SetProperties(
                                              specPropsWithValue,
                                              sp => sp.Value.IsNothing()
                                                    && sp.Specification.TargetType == TargetType.Sequence
                                                    && sp.Specification.DefaultValue.MatchNothing(),
-                                             sp => addDisposableToList(sp.Property.PropertyType.GetTypeInfo().GetGenericArguments().Single().CreateEmptyList()));
+                                             sp => sp.Property.PropertyType.GetTypeInfo().GetGenericArguments().Single().CreateEmptyList());
                         return mutable;
                     };
 
@@ -111,11 +104,9 @@ namespace CommandLine.Core
                         var ctor = typeInfo.GetTypeInfo().GetConstructor((from sp in specProps select sp.Property.PropertyType).ToArray());
                         var values = (from prms in ctor.GetParameters()
                                       join sp in specPropsWithValue on prms.Name.ToLower() equals sp.Property.Name.ToLower()
-                                      select addDisposableToList(sp.Value.GetValueOrDefault(
+                                      select sp.Value.GetValueOrDefault(
                                           sp.Specification.DefaultValue.GetValueOrDefault(
-                                              sp.Specification.ConversionType.CreateDefaultForImmutable())))).ToArray();
-
-                        disposableOptions.AddRange(values.OfType<IDisposable>());
+                                              sp.Specification.ConversionType.CreateDefaultForImmutable()))).ToArray();
 
                         var immutable = (T)ctor.Invoke(values);
                         return immutable;

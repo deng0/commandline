@@ -1,20 +1,47 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using CommandLine;
 
 namespace ConsoleApp1
 {
     public class AppOptions
     {
-        [Option("bla", Default = true)] 
+        [Option("bla", Default = true)]
         public bool Bla { get; set; } = true;
 
         [Option("blub", Default = "hallo Sie")]
         public string Blub { get; set; }
 
-        [Option("num")] 
+        [Option("num")]
         public int Num { get; set; } = 3; // probably best to set Default, too
+
+        [Option("test")]
+        public List<TestDisp> Test { get; set; }
+
+        [Option("test2")]
+        public TestDisp test2 { get; set; }
+    }
+
+    public class TestDisp : IDisposable
+    {
+        public string str;
+
+        public TestDisp(string str)
+        {
+            this.str = str;
+        }
+
+        public void Dispose()
+        {
+
+        }
+
+        public override string ToString()
+        {
+            return str;
+        }
     }
 
     class Program
@@ -28,7 +55,12 @@ namespace ConsoleApp1
                     with.CaseSensitive = false;
                 }))
             {
-                var r = parser.ParseArguments<AppOptions>(args);
+                ParserResult<AppOptions> r = parser.ParseArguments<AppOptions>(args);
+
+                if (r is Parsed<AppOptions> parsed)
+                {
+                    var dis = parsed.DisposableOptions;
+                }
 
                 r.WithParsed(op =>
                 {

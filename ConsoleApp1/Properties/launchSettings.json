@@ -2,7 +2,7 @@
   "profiles": {
     "ConsoleApp1": {
       "commandName": "Project",
-      "commandLineArgs": "--bla \"true\" --blub \"hallo sSie\" --num 3"
+      "commandLineArgs": "--blub \"hallo sSie\" --num 3 --test \"muh \\\"MUH\\\" muh\" bla --test2 kk"
     }
   }
 }

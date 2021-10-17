@@ -16,14 +16,14 @@ namespace CommandLine.Core
 {
     static class TypeConverter
     {
-        public static Maybe<object> ChangeType(IEnumerable<string> values, Type conversionType, bool scalar, CultureInfo conversionCulture, bool ignoreValueCase)
+        public static Maybe<object> ChangeType(IEnumerable<string> values, Type conversionType, bool scalar, CultureInfo conversionCulture, bool ignoreValueCase, List<IDisposable> disposables)
         {
             return scalar
-                ? ChangeTypeScalar(values.Single(), conversionType, conversionCulture, ignoreValueCase)
-                : ChangeTypeSequence(values, conversionType, conversionCulture, ignoreValueCase);
+                ? ChangeTypeScalar(values.Single(), conversionType, conversionCulture, ignoreValueCase, disposables)
+                : ChangeTypeSequence(values, conversionType, conversionCulture, ignoreValueCase, disposables);
         }
 
-        private static Maybe<object> ChangeTypeSequence(IEnumerable<string> values, Type conversionType, CultureInfo conversionCulture, bool ignoreValueCase)
+        private static Maybe<object> ChangeTypeSequence(IEnumerable<string> values, Type conversionType, CultureInfo conversionCulture, bool ignoreValueCase, List<IDisposable> disposables)
         {
             if (!conversionType.GetTypeInfo().IsGenericType ||
                 conversionType.GetTypeInfo().GetGenericTypeDefinition() != typeof(List<>))
@@ -31,22 +31,22 @@ namespace CommandLine.Core
 
             var type = conversionType.GetTypeInfo().GetGenericArguments()[0];
 
-            var converted = values.Select(value => ChangeTypeScalar(value, type, conversionCulture, ignoreValueCase));
+            var converted = values.Select(value => ChangeTypeScalar(value, type, conversionCulture, ignoreValueCase, disposables)).Memorize();
 
             return converted.Any(a => a.MatchNothing())
                 ? Maybe.Nothing<object>()
                 : Maybe.Just(converted.Select(c => ((Just<object>)c).Value).ToTypedList(type));
         }
 
-        private static Maybe<object> ChangeTypeScalar(string value, Type conversionType, CultureInfo conversionCulture, bool ignoreValueCase)
+        private static Maybe<object> ChangeTypeScalar(string value, Type conversionType, CultureInfo conversionCulture, bool ignoreValueCase, List<IDisposable> disposables)
         {
-            var result = ChangeTypeScalarImpl(value, conversionType, conversionCulture, ignoreValueCase);
+            var result = ChangeTypeScalarImpl(value, conversionType, conversionCulture, ignoreValueCase, disposables);
             result.Match((_,__) => { }, e => e.First().RethrowWhenAbsentIn(
                 new[] { typeof(InvalidCastException), typeof(FormatException), typeof(OverflowException) }));
             return result.ToMaybe();
         }
 
-        private static Result<object, Exception> ChangeTypeScalarImpl(string value, Type conversionType, CultureInfo conversionCulture, bool ignoreValueCase)
+        private static Result<object, Exception> ChangeTypeScalarImpl(string value, Type conversionType, CultureInfo conversionCulture, bool ignoreValueCase, List<IDisposable> disposables)
         {
             Func<object> changeType = () =>
             {
@@ -81,9 +81,16 @@ namespace CommandLine.Core
                     return (value == null) ? empty() : withValue();
                 };
 
-                return value.IsBooleanString() && conversionType == typeof(bool)
+                object result = value.IsBooleanString() && conversionType == typeof(bool)
                     ? value.ToBoolean() : conversionType.GetTypeInfo().IsEnum
                         ? value.ToEnum(conversionType, ignoreValueCase) : safeChangeType();
+
+                if (result is IDisposable disposable)
+                {
+                    disposables.Add(disposable);
+                }
+
+                return result;
             };
 
             Func<object> makeType = () =>
@@ -91,7 +98,12 @@ namespace CommandLine.Core
                 try
                 {
                     var ctor = conversionType.GetTypeInfo().GetConstructor(new[] { typeof(string) });
-                    return ctor.Invoke(new object[] { value });
+                    object result = ctor.Invoke(new object[] { value });
+                    if (result is IDisposable disposable)
+                    {
+                        disposables.Add(disposable);
+                    }
+                    return result;
                 }
                 catch (Exception)
                 {
