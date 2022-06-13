@@ -331,7 +331,7 @@ namespace CommandLine.Text
                 return AutoBuild(parserResult, current => DefaultParsingErrorsHandler(parserResult, current), e => e, false, additionalOptions, maxDisplayWidth, addHelpAndVersionCommands, sentenceBuilder, unParser);
 
             var err = errors.OfType<HelpVerbRequestedError>().Single();
-            var pr = new NotParsed<object>(TypeInfo.Create(err.Type), Enumerable.Empty<Error>());
+            var pr = new NotParsed<object>(TypeInfo.Create(err.Type), Enumerable.Empty<Error>(), new List<IDisposable>());
             return err.Matched
                 ? AutoBuild(pr, current => DefaultParsingErrorsHandler(pr, current), e => e, false, additionalOptions, maxDisplayWidth, addHelpAndVersionCommands, sentenceBuilder, unParser)
                 : AutoBuild(parserResult, current => DefaultParsingErrorsHandler(parserResult, current), e => e, true, additionalOptions, maxDisplayWidth, addHelpAndVersionCommands, sentenceBuilder, unParser);

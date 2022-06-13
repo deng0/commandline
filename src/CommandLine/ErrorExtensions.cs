@@ -14,15 +14,7 @@ namespace CommandLine
         {
             if (errors.Any())
             {
-                try
-                {
-                    disposableOptions.ForEach(d => d.Dispose());
-                }
-                catch
-                {
-                }
-
-                return new NotParsed<T>(instance.GetType().ToTypeInfo(), errors);
+                return new NotParsed<T>(instance.GetType().ToTypeInfo(), errors, disposableOptions);
             }
             else
             {

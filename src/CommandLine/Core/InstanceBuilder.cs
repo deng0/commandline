@@ -42,9 +42,6 @@ namespace CommandLine.Core
                 .ThrowingValidate(SpecificationGuards.Lookup)
                 .OfType<OptionSpecification>();
 
-            Func<IEnumerable<Error>, ParserResult<T>> notParsed =
-                errs => new NotParsed<T>(typeInfo.ToTypeInfo(), errs);
-
             Func<ParserResult<T>> buildUp = () =>
             {
                 var disposableOptions = new List<IDisposable>();
@@ -140,7 +137,7 @@ namespace CommandLine.Core
 
             var result = arguments.Any()
                 ? preprocessorErrors.Any()
-                    ? notParsed(preprocessorErrors)
+                    ? new NotParsed<T>(typeInfo.ToTypeInfo(), preprocessorErrors, new List<IDisposable>())
                     : buildUp()
                 : buildUp();
 

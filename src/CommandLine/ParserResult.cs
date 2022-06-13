@@ -65,11 +65,16 @@ namespace CommandLine
         private readonly ParserResultType tag;
         private readonly TypeInfo typeInfo;
 
-        internal ParserResult(ParserResultType tag, TypeInfo typeInfo)
+        private readonly List<IDisposable> disposableOptions;
+
+        internal ParserResult(ParserResultType tag, TypeInfo typeInfo, List<IDisposable> disposableOptions)
         {
             this.tag = tag;
             this.typeInfo = typeInfo;
+            this.disposableOptions = disposableOptions;
         }
+
+        public List<IDisposable> DisposableOptions => this.disposableOptions;
 
         /// <summary>
         /// Parser result type discriminator, defined as <see cref="CommandLine.ParserResultType"/> enumeration.
@@ -91,13 +96,12 @@ namespace CommandLine
     public sealed class Parsed<T> : ParserResult<T>, IEquatable<Parsed<T>>
     {
         private readonly T value;
-        private readonly List<IDisposable> disposableOptions;
+ 
 
         internal Parsed(T value, TypeInfo typeInfo, List<IDisposable> disposableOptions)
-            : base(ParserResultType.Parsed, typeInfo)
+            : base(ParserResultType.Parsed, typeInfo, disposableOptions)
         {
             this.value = value;
-            this.disposableOptions = disposableOptions;
         }
 
         internal Parsed(T value, List<IDisposable> disposableOptions)
@@ -112,8 +116,6 @@ namespace CommandLine
         {
             get { return value; }
         }
-
-        public List<IDisposable> DisposableOptions => this.disposableOptions;
 
         /// <summary>
         /// Determines whether the specified <see cref="System.Object"/> is equal to the current <see cref="System.Object"/>.
@@ -165,8 +167,8 @@ namespace CommandLine
     {
         private readonly IEnumerable<Error> errors;
 
-        internal NotParsed(TypeInfo typeInfo, IEnumerable<Error> errors)
-            : base(ParserResultType.NotParsed, typeInfo)
+        internal NotParsed(TypeInfo typeInfo, IEnumerable<Error> errors, List<IDisposable> disposableOptions)
+            : base(ParserResultType.NotParsed, typeInfo, disposableOptions)
         {
             this.errors = errors;
         }
@@ -177,7 +179,7 @@ namespace CommandLine
         /// <param name="type">The type.</param>
         /// <param name="errors">The <see cref="Error"/>s that should be contained in the <see cref="ParserResult{T}"/>.</param>
         /// <returns>A new <see cref="NotParsed{T}"/> instance.</returns>
-        public static NotParsed<T> FromErrorList(Type type, params Error[] errors) => new NotParsed<T>(type.ToTypeInfo(), errors);
+        public static NotParsed<T> FromErrorList(Type type, params Error[] errors) => new NotParsed<T>(type.ToTypeInfo(), errors, new List<IDisposable>());
 
         /// <summary>
         /// Gets the sequence of parsing errors.

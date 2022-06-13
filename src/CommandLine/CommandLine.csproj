@@ -7,9 +7,6 @@
     <TargetFrameworks>netstandard2.0;net40;net45</TargetFrameworks>
     <DefineConstants>$(DefineConstants);CSX_REM_EITHER_FUNC;SKIP_FSHARP</DefineConstants>
     <AssemblyName>CommandLine</AssemblyName>
-    <AssemblyOriginatorKeyFile>../../CommandLine.snk</AssemblyOriginatorKeyFile>
-    <SignAssembly>true</SignAssembly>
-    <PublicSign Condition=" '$(OS)' != 'Windows_NT' ">true</PublicSign>
     <PackageId>CommandLineParser</PackageId>
     <PackageLicenseUrl>https://raw.githubusercontent.com/gsscoder/commandline/master/doc/LICENSE</PackageLicenseUrl>
     <RepositoryType>git</RepositoryType>
@@ -17,7 +14,7 @@
     <GenerateAssemblyTitleAttribute>false</GenerateAssemblyTitleAttribute>
     <GenerateAssemblyDescriptionAttribute>false</GenerateAssemblyDescriptionAttribute>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
-    <Version>2.1.1.11</Version>
+    <Version>2.1.1.12</Version>
   </PropertyGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'net40' ">
