@@ -8,8 +8,8 @@ namespace ConsoleApp1
 {
     public class AppOptions
     {
-        [Option("bla", Default = true)]
-        public bool Bla { get; set; } = true;
+        [Option("bla", Default = false)]
+        public bool Bla { get; set; } = false;
 
         [Option("blub", Default = "hallo Sie")]
         public string Blub { get; set; }
@@ -51,11 +51,16 @@ namespace ConsoleApp1
             using (Parser parser = new Parser(
                 with =>
                 {
-                    with.IgnoreUnknownArguments = true;
+                    with.IgnoreUnknownArguments = false;
                     with.CaseSensitive = false;
                 }))
             {
                 ParserResult<AppOptions> r = parser.ParseArguments<AppOptions>(args);
+
+                if (r is NotParsed<AppOptions> notParsed)
+                {
+                    var err = notParsed.Errors.FirstOrDefault();
+                }
 
                 if (r is Parsed<AppOptions> parsed)
                 {
