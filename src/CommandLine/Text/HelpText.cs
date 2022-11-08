@@ -158,7 +158,7 @@ namespace CommandLine.Text
 
         /// <summary>
         /// Gets or sets a value indicating whether the format of options should contain dashes.
-        /// It modifies behavior of <see cref="AddOptions{T}(ParserResult{T})"/> method.
+        /// It modifies behavior of <see cref="AddOptions{T}(int, ParserResult{T})"/> method.
         /// </summary>
         public bool AddDashesToOption
         {
@@ -311,7 +311,7 @@ namespace CommandLine.Text
         /// <returns>
         /// An instance of <see cref="CommandLine.Text.HelpText" /> class.
         /// </returns>
-        /// <exception cref="ArgumentException">Excepting NotParsed<T> type. - parserResult</exception>
+        /// <exception cref="ArgumentException">Excepting NotParsed type. - parserResult</exception>
         /// <remarks>
         /// This feature is meant to be invoked automatically by the parser, setting the HelpWriter property
         /// of <see cref="CommandLine.ParserSettings" />.
