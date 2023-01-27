@@ -41,13 +41,26 @@ namespace CommandLine.Core
         private static Maybe<object> ChangeTypeScalar(string value, Type conversionType, CultureInfo conversionCulture, bool ignoreValueCase, List<IDisposable> disposables)
         {
             var result = ChangeTypeScalarImpl(value, conversionType, conversionCulture, ignoreValueCase, disposables);
-            result.Match((_,__) => { }, e => e.First().RethrowWhenAbsentIn(
+            result.Match((_, __) => { }, e => e.First().RethrowWhenAbsentIn(
                 new[] { typeof(InvalidCastException), typeof(FormatException), typeof(OverflowException) }));
             return result.ToMaybe();
         }
 
         private static Result<object, Exception> ChangeTypeScalarImpl(string value, Type conversionType, CultureInfo conversionCulture, bool ignoreValueCase, List<IDisposable> disposables)
         {
+            if (value != null)
+            {
+                if (value.StartsWith("|{"))
+                {
+                    value = value.Substring(1);
+                }
+
+                if (value.EndsWith("}|"))
+                {
+                    value = value.Substring(0, value.Length - 1);
+                }
+            }
+
             Func<object> changeType = () =>
             {
                 Func<object> safeChangeType = () =>
