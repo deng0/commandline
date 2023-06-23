@@ -1,5 +1,5 @@
 //Use project level define(s) when referencing with Paket.
-//#define CSX_ENUM_INTERNAL // Uncomment this to set visibility to internal.
+#define CSX_ENUM_INTERNAL // Uncomment this to set visibility to internal.
 //#define CSX_ENUM_REM_STD_FUNC // Uncomment this to remove standard functions.
 //#define CSX_REM_MAYBE_FUNC // Uncomment this to remove dependency to Maybe.cs.
 //#define CSX_REM_EXTRA_FUNC // Uncomment this to extra functions.

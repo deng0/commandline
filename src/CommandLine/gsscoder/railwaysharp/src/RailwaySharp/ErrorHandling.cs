@@ -1,5 +1,5 @@
 ﻿//Use project level define(s) when referencing with Paket.
-//#define ERRH_INTERNAL // Uncomment this to set visibility to internal.
+#define ERRH_INTERNAL // Uncomment this to set visibility to internal.
 //#define ERRH_DISABLE_INLINE_METHODS // Uncomment this to enable method inlining when compiling for >= NET 4.5.
 //#define ERRH_BUILTIN_TYPES // Uncomment this to use built-in Unit type, instead of extenral identical CSharpx.Unit.
 
