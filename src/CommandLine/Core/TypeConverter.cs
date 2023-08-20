@@ -63,40 +63,29 @@ namespace CommandLine.Core
 
             Func<object> changeType = () =>
             {
+                Func<object> empty = () => null;
+
+                if (value == null)
+                {
+                    return empty();
+                }
+
+                Func<Type> getUnderlyingType =
+                        () => Nullable.GetUnderlyingType(conversionType);
+
+                var type = getUnderlyingType() ?? conversionType;
+
                 Func<object> safeChangeType = () =>
                 {
-                    var isFsOption = ReflectionHelper.IsFSharpOptionType(conversionType);
-
-                    Func<Type> getUnderlyingType =
-                        () =>
-#if !SKIP_FSHARP
-                            isFsOption
-                                ? FSharpOptionHelper.GetUnderlyingType(conversionType) :
-#endif
-                                Nullable.GetUnderlyingType(conversionType);
-
-                    var type = getUnderlyingType() ?? conversionType;
-
                     Func<object> withValue =
-                        () =>
-#if !SKIP_FSHARP
-                            isFsOption
-                                ? FSharpOptionHelper.Some(type, Convert.ChangeType(value, type, conversionCulture)) :
-#endif
-                                Convert.ChangeType(value, type, conversionCulture);
+                        () => Convert.ChangeType(value, type, conversionCulture);
 
-#if !SKIP_FSHARP
-                    Func<object> empty = () => isFsOption ? FSharpOptionHelper.None(type) : null;
-#else
-                    Func<object> empty = () => null;
-#endif
-
-                    return (value == null) ? empty() : withValue();
+                    return withValue();
                 };
 
-                object result = value.IsBooleanString() && conversionType == typeof(bool)
-                    ? value.ToBoolean() : conversionType.GetTypeInfo().IsEnum
-                        ? value.ToEnum(conversionType, ignoreValueCase) : safeChangeType();
+                object result = value.IsBooleanString() && type == typeof(bool)
+                    ? value.ToBoolean() : type.GetTypeInfo().IsEnum
+                        ? value.ToEnum(type, ignoreValueCase) : safeChangeType();
 
                 if (result is IDisposable disposable)
                 {
@@ -125,7 +114,7 @@ namespace CommandLine.Core
             };
 
             return Result.Try(
-                conversionType.IsPrimitiveEx() || ReflectionHelper.IsFSharpOptionType(conversionType)
+                conversionType.IsPrimitiveEx()
                     ? changeType
                     : makeType);
         }

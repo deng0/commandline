@@ -76,12 +76,6 @@ namespace CommandLine.Infrastructure
             return assembly.GetName().Version.ToStringInvariant();
         }
 
-        public static bool IsFSharpOptionType(Type type)
-        {
-            return type.FullName.StartsWith(
-                "Microsoft.FSharp.Core.FSharpOption`1", StringComparison.Ordinal);
-        }
-
         public static T CreateDefaultImmutableInstance<T>(Type[] constructorTypes)
         {
             var t = typeof(T);

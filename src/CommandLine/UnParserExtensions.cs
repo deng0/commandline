@@ -269,30 +269,8 @@ namespace CommandLine
 
         internal static object NormalizeValue(this object value)
         {
-#if !SKIP_FSHARP
-            if (value != null
-                && ReflectionHelper.IsFSharpOptionType(value.GetType())
-                && FSharpOptionHelper.IsSome(value))
-            {
-                return FSharpOptionHelper.ValueOf(value);
-            }
-#endif
             return value;
         }
-
-        /*
-        internal static bool IsEmpty(this object value)
-        {
-            if (value == null) return true;
-#if !SKIP_FSHARP
-            if (ReflectionHelper.IsFSharpOptionType(value.GetType()) && !FSharpOptionHelper.IsSome(value)) return true;
-#endif
-            if (value is ValueType && value.Equals(value.GetType().GetDefaultValue())) return true;
-            if (value is string && ((string)value).Length == 0) return true;
-            if (value is IEnumerable && !((IEnumerable)value).GetEnumerator().MoveNext()) return true;
-            return false;
-        }
-        */
 
         internal static bool IsDefault(object value, Maybe<object> defaultValue)
         {
