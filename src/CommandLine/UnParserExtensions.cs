@@ -218,15 +218,16 @@ namespace CommandLine
                 strVal = strVal.Replace("\"", "\\\"");
             }
 
-            if (strVal.StartsWith("{"))
-            {
-                strVal = "|" + strVal;
-            }
+            // workaround removed in 2.1.1.18
+            //if (strVal.StartsWith("{"))
+            //{
+            //    strVal = "|" + strVal;
+            //}
 
-            if (strVal.EndsWith("}"))
-            {
-                strVal = strVal + "|";
-            }
+            //if (strVal.EndsWith("}"))
+            //{
+            //    strVal = strVal + "|";
+            //}
 
             if (strVal.Contains(' ') || strVal.Contains('\\') || strVal.Contains('|') || strVal.Contains('{') || strVal.Contains('}'))
             {

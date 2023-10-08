@@ -50,6 +50,7 @@ namespace CommandLine.Core
         {
             if (value != null)
             {
+                // these two adjustments are workaround that should no longer be used (needed CommandLine [2.1.1.15-17])
                 if (value.StartsWith("|{"))
                 {
                     value = value.Substring(1);
