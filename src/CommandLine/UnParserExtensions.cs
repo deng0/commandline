@@ -83,6 +83,70 @@ namespace CommandLine
         /// <typeparam name="T">Type of <paramref name="options"/>.</typeparam>
         /// <param name="options">A parsed (or manually correctly constructed instance).</param>
         /// <returns>A string with command line arguments.</returns>
+        public virtual string FormatNiceCommandLine<T>(T options, string linePrefix)
+        {
+            if (options == null)
+                throw new ArgumentNullException("options");
+
+            var type = options.GetType();
+            var builder = new StringBuilder();
+
+            type.GetVerbSpecification()
+                .MapValueOrDefault(verb => builder.Append(linePrefix).Append("Verb: ").Append(verb.Name).Append(Environment.NewLine), builder);
+
+            var specs =
+                (from info in
+                    type.GetSpecifications(
+                        pi => new
+                        {
+                            Specification = Specification.FromProperty(pi),
+                            Value = pi.GetValue(options, null).NormalizeValue(),
+                            PropertyValue = pi.GetValue(options, null)
+                        })
+                 where !UnParserHelperExtensions.IsDefault(info.PropertyValue, info.Specification.DefaultValue)
+                 select info)
+                    .Memorize();
+
+            var allOptSpecs = from info in specs.Where(i => i.Specification.Tag == SpecificationType.Option)
+                              let o = (OptionSpecification)info.Specification
+                              where o.TargetType != TargetType.Switch || (o.TargetType == TargetType.Switch && ((bool)info.Value))
+                              //orderby o.UniqueName()
+                              select info;
+
+            var optSpecs = allOptSpecs;
+
+            var valSpecs = from info in specs.Where(i => i.Specification.Tag == SpecificationType.Value)
+                           let v = (ValueSpecification)info.Specification
+                           orderby v.Index
+                           select info;
+
+
+            optSpecs.ForEach(
+                opt =>
+                    builder
+                        .Append(linePrefix)
+                        .Append(((OptionSpecification)opt.Specification).NiceFormatOption(opt.Value))
+                        .Append(Environment.NewLine)
+                );
+
+            valSpecs.ForEach(
+                val =>
+                    builder
+                        .Append(linePrefix)
+                        .Append("Values: ")
+                        .Append(FormatValue(val.Specification, val.Value))
+                        .Append(Environment.NewLine)
+                );
+
+            return builder.ToString();
+        }
+
+        /// <summary>
+        /// Format a command line argument string from a parsed instance. 
+        /// </summary>
+        /// <typeparam name="T">Type of <paramref name="options"/>.</typeparam>
+        /// <param name="options">A parsed (or manually correctly constructed instance).</param>
+        /// <returns>A string with command line arguments.</returns>
         public string FormatCommandLine<T>(T options)
         {
             return FormatCommandLine(options, config => { });
@@ -244,6 +308,14 @@ namespace CommandLine
         {
             return (spec as OptionSpecification).ToMaybe()
                 .MapValueOrDefault(o => o.Separator != '\0' ? o.Separator : ' ', ' ');
+        }
+
+        internal static string NiceFormatOption(this OptionSpecification spec, object value)
+        {
+            return new StringBuilder()
+                    .Append(spec.LongName)
+                    .AppendWhen(spec.TargetType != TargetType.Switch, ": ", UnParser.FormatValue(spec, value))
+                .ToString();
         }
 
         internal static string FormatOption(this OptionSpecification spec, object value, UnParserSettings settings)
