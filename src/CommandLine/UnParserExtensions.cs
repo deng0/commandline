@@ -239,11 +239,9 @@ namespace CommandLine
                     break;
                 case TargetType.Sequence:
                     var sep = spec.SeperatorOrSpace();
-                    Func<object, object> format = v
-                        => sep == ' ' ? FormatWithQuotes(v) : Convert.ToString(v, CultureInfo.InvariantCulture);
                     var e = ((IEnumerable)value).GetEnumerator();
                     while (e.MoveNext())
-                        builder.Append(format(e.Current)).Append(sep);
+                        builder.Append(FormatWithQuotes(e.Current)).Append(sep);
                     builder.TrimEndIfMatch(sep);
                     break;
             }
@@ -254,7 +252,7 @@ namespace CommandLine
         {
             if (value is null)
             {
-                return string.Empty;
+                return "\"\"";
             }
 
             string strVal;
@@ -274,7 +272,7 @@ namespace CommandLine
 
             if (string.IsNullOrEmpty(strVal))
             {
-                return string.Empty;
+                return "\"\"";
             }
 
             if (strVal.Contains("\""))
@@ -370,6 +368,10 @@ namespace CommandLine
                 if (defaultValue.MatchJust(out object def) && def is string defStr)
                 {
                     return string.Equals(str, defStr);
+                }
+                else if (string.IsNullOrEmpty(str))
+                {
+                    return defaultValue.Tag == MaybeType.Nothing;
                 }
                 else
                 {
