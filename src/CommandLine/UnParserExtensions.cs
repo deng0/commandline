@@ -277,6 +277,7 @@ namespace CommandLine
 
             if (strVal.Contains("\""))
             {
+                strVal = strVal.Replace("\\\"", "\\\\\"");
                 strVal = strVal.Replace("\"", "\\\"");
             }
 
@@ -291,12 +292,26 @@ namespace CommandLine
             //    strVal = strVal + "|";
             //}
 
+            // escape special characters that cause problems in the command line
+            strVal = strVal.Replace("^", "^^")
+                           .Replace("&", "^&")
+                           .Replace("(", "^(")
+                           .Replace(")", "^)")
+                           .Replace("<", "^<")
+                           .Replace(">", "^>")
+                           .Replace("|", "^|");
+
             if (strVal.Contains(' ') || strVal.Contains('\\') || strVal.Contains('|') || strVal.Contains('{') || strVal.Contains('}'))
             {
                 strVal = "\"" + strVal + "\"";
             }
 
             return strVal;
+        }
+
+        public static string EscapeStringValue(string str)
+        {
+            return FormatWithQuotes(str);
         }
     }
 

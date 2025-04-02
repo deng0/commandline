@@ -16,6 +16,36 @@ namespace CommandLine
     /// </summary>
     public class Parser : IDisposable
     {
+        public static string UnescapeStringValue(string str)
+        {
+            if (string.IsNullOrEmpty(str))
+            {
+                return str;
+            }
+
+            // normally " at stand and end is removed by the basic command line parser, if not we do it now
+            if (str.StartsWith("\"") && str.EndsWith("\""))
+            {
+                str = str.Substring(1, str.Length - 2);
+
+                // additionally replace escaped quotes (incl. double-escaped quotes)
+                str = str.Replace("\\\\\\\"", "\\\\\"").Replace("\\\"", "\"");
+            }
+
+            if (str.Contains("^"))
+            {
+                str = str.Replace("^&", "&")
+                         .Replace("^(", "(")
+                         .Replace("^)", ")")
+                         .Replace("^<", "<")
+                         .Replace("^>", ">")
+                         .Replace("^|", "|")
+                         .Replace("^^", "^");
+            }
+
+            return str;
+        }
+
         private bool disposed;
         private readonly ParserSettings settings;
         private static readonly Lazy<Parser> DefaultParser = new Lazy<Parser>(
