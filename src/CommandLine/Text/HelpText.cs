@@ -3,12 +3,13 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
-using System.Text;
 using System.Linq;
 using System.Reflection;
-using CommandLine.Infrastructure;
+using System.Text;
 using CommandLine.Core;
+using CommandLine.Infrastructure;
 using CSharpx;
 
 namespace CommandLine.Text
@@ -19,6 +20,38 @@ namespace CommandLine.Text
     /// </summary>
     public class HelpText
     {
+        public static List<object> GetBrowsableEnumValues(Type enumType)
+        {
+            // Ensure the provided Type is actually an enum
+            if (enumType == null || !enumType.IsEnum)
+            {
+                throw new ArgumentException("Input must be a valid enumerated type.", nameof(enumType));
+            }
+
+            List<object> browsableValues = new List<object>();
+
+            // Get all public static fields, which represent the enum members
+            FieldInfo[] fields = enumType.GetFields(BindingFlags.Public | BindingFlags.Static);
+
+            foreach (FieldInfo field in fields)
+            {
+                // Try to retrieve the BrowsableAttribute instance
+                BrowsableAttribute browsableAttribute = field.GetCustomAttribute<BrowsableAttribute>(false);
+
+                // Determine if the enum value should be considered browsable
+                // It's browsable if no BrowsableAttribute is present, or if it's present and set to true.
+                bool isBrowsable = (browsableAttribute == null) || browsableAttribute.Browsable;
+
+                if (isBrowsable)
+                {
+                    // Get the actual enum value and add it to the list as an object
+                    browsableValues.Add(field.GetValue(null));
+                }
+            }
+
+            return browsableValues;
+        }
+
         private const int BuilderCapacity = 128;
         private const int DefaultMaximumLength = 80; // default console width
         private readonly StringBuilder preOptionsHelp;
@@ -853,11 +886,20 @@ namespace CommandLine.Text
 
             var optionHelpText = specification.HelpText;
 
-            if (addEnumValuesToHelpText && specification.EnumValues.Any())
-                optionHelpText += " Valid values: " + string.Join(", ", specification.EnumValues);
+            //if (addEnumValuesToHelpText && specification.EnumValues.Any())
+            //    optionHelpText += " Valid values: " + string.Join(", ", specification.EnumValues);
 
             specification.DefaultValue.Do(
                 defaultValue => optionHelpText = "(Default: {0}) ".FormatInvariant(FormatDefaultValue(defaultValue)) + optionHelpText);
+
+            if (specification.ConversionType is Type type && type.IsEnum)
+            {
+                var arr = GetBrowsableEnumValues(type);
+                if (arr.Count > 0)
+                {
+                    optionHelpText += $"(Values: {string.Join(", ", arr)}) ";
+                }
+            }
 
             if (specification.Required)
                 optionHelpText = "{0} ".FormatInvariant(requiredWord) + optionHelpText;
