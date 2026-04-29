@@ -190,7 +190,7 @@ namespace CommandLine.Core
                     yield break;
                 }
 
-                var tokenMatch = Regex.Match(text, "^([^=]+)=([^ ].*)$");
+                var tokenMatch = Regex.Match(text, "^([^=]+)=([^ ].*)$", RegexOptions.Singleline);
 
                 if (tokenMatch.Success)
                 {

@@ -299,9 +299,11 @@ namespace CommandLine
                            .Replace(")", "^)")
                            .Replace("<", "^<")
                            .Replace(">", "^>")
-                           .Replace("|", "^|");
+                           .Replace("|", "^|")
+                           .Replace("\n", "^n")
+                           .Replace("\r", "^r");
 
-            if (strVal.Contains(' ') || strVal.Contains('\\') || strVal.Contains('|') || strVal.Contains('{') || strVal.Contains('}'))
+            if (strVal.Contains(' ') || strVal.Contains('\\') || strVal.Contains('|') || strVal.Contains('{') || strVal.Contains('}') || strVal.Contains('^'))
             {
                 strVal = "\"" + strVal + "\"";
             }

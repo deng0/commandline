@@ -34,7 +34,9 @@ namespace CommandLine
 
             if (str.Contains("^"))
             {
-                str = str.Replace("^&", "&")
+                str = str.Replace("^n", "\n")
+                         .Replace("^r", "\r")
+                         .Replace("^&", "&")
                          .Replace("^(", "(")
                          .Replace("^)", ")")
                          .Replace("^<", "<")
