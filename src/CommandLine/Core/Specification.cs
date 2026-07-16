@@ -93,7 +93,7 @@ namespace CommandLine.Core
                         : Enumerable.Empty<string>());
                 if (spec.ShortName.Length == 0 && spec.LongName.Length == 0)
                 {
-                    return spec.WithLongName(property.Name.ToLowerInvariant());
+                    return spec.WithLongName(property.Name);
                 }
                 return spec;
             }
